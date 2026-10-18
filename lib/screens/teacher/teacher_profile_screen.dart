@@ -1,5 +1,8 @@
+import 'teacher_details_screen.dart';
+import '../../utils/app_actions.dart';
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../theme/app_theme.dart';
 
 // Screens for Navigation
@@ -15,27 +18,52 @@ class TeacherProfileScreen extends StatelessWidget {
   const TeacherProfileScreen({super.key});
 
   // Helper for Settings Rows
-  Widget _buildSettingTile(IconData icon, String title, {bool isDestructive = false, VoidCallback? onTap}) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isDestructive ? AppColors.error.withOpacity(0.1) : AppColors.primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+  Widget _buildSettingTile(
+    BuildContext context,
+    IconData icon,
+    String title, {
+    bool isDestructive = false,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      type: MaterialType.transparency,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isDestructive
+                ? AppColors.error.withValues(alpha: 0.1)
+                : AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: isDestructive ? AppColors.error : AppColors.primary,
+            size: 20,
+          ),
         ),
-        child: Icon(icon, color: isDestructive ? AppColors.error : AppColors.primary, size: 20),
-      ),
-      title: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: isDestructive ? AppColors.error : AppColors.textPrimary,
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: isDestructive ? AppColors.error : AppColors.textPrimary,
+          ),
         ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: AppColors.textSecondary,
+          size: 20,
+        ),
+        onTap:
+            onTap ??
+            () => showAppInfo(
+              context,
+              'Local demo',
+              'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+            ),
       ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary, size: 20),
-      onTap: onTap ?? () {},
     );
   }
 
@@ -49,9 +77,13 @@ class TeacherProfileScreen extends StatelessWidget {
           elevation: 0,
           scrolledUnderElevation: 0,
           automaticallyImplyLeading: false, // Hide back button for main tabs
-          title: Text(
+          title: const Text(
             'Profile',
-            style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
           centerTitle: true,
         ),
@@ -68,7 +100,11 @@ class TeacherProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.dividerLight),
                   boxShadow: [
-                    BoxShadow(color: AppColors.primary.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
                 child: Column(
@@ -76,21 +112,33 @@ class TeacherProfileScreen extends StatelessWidget {
                     const CircleAvatar(
                       radius: 40,
                       backgroundColor: Color(0xFFF1F5F9),
-                      child: Icon(Icons.person, size: 40, color: Color(0xFF94A3B8)),
+                      child: Icon(
+                        Icons.person,
+                        size: 40,
+                        color: Color(0xFF94A3B8),
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // 1. Dynamic Name
                     Text(
                       'Prof. ${UserSession.teacherName}',
-                      style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    
+
                     // 2. Dynamic Department
                     Text(
                       UserSession.teacherDept,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 14, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Divider(color: AppColors.dividerLight),
@@ -100,8 +148,15 @@ class TeacherProfileScreen extends StatelessWidget {
                       children: [
                         // 3. Dynamic Faculty ID
                         _buildProfileStat('Faculty ID', UserSession.teacherId),
-                        Container(height: 40, width: 1, color: AppColors.dividerLight),
-                        _buildProfileStat('Classes', '4 Active'), // Leaving this hardcoded for now
+                        Container(
+                          height: 40,
+                          width: 1,
+                          color: AppColors.dividerLight,
+                        ),
+                        _buildProfileStat(
+                          'Classes',
+                          '4 Active',
+                        ), // Leaving this hardcoded for now
                       ],
                     ),
                   ],
@@ -110,10 +165,21 @@ class TeacherProfileScreen extends StatelessWidget {
               const SizedBox(height: 32),
 
               // ── Settings Section ──
-              Text('Account Settings', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 1.2)),
+              const Text(
+                'Account Settings',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 1.2,
+                ),
+              ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -121,20 +187,49 @@ class TeacherProfileScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildSettingTile(Icons.person_outline_rounded, 'Edit Personal Details'),
+                    _buildSettingTile(
+                      context,
+                      Icons.person_outline_rounded,
+                      'Edit Personal Details',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const TeacherDetailsScreen(),
+                        ),
+                      ),
+                    ),
                     const Divider(color: AppColors.dividerLight, height: 1),
-                    _buildSettingTile(Icons.notifications_outlined, 'Notification Preferences'),
+                    _buildSettingTile(
+                      context,
+                      Icons.notifications_outlined,
+                      'Notification Preferences',
+                    ),
                     const Divider(color: AppColors.dividerLight, height: 1),
-                    _buildSettingTile(Icons.lock_outline_rounded, 'Privacy & Security'),
+                    _buildSettingTile(
+                      context,
+                      Icons.lock_outline_rounded,
+                      'Privacy & Security',
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
 
-              Text('App & Support', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textSecondary, letterSpacing: 1.2)),
+              const Text(
+                'App & Support',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 1.2,
+                ),
+              ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -142,17 +237,24 @@ class TeacherProfileScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _buildSettingTile(Icons.help_outline_rounded, 'Help Center'),
+                    _buildSettingTile(
+                      context,
+                      Icons.help_outline_rounded,
+                      'Help Center',
+                    ),
                     const Divider(color: AppColors.dividerLight, height: 1),
                     _buildSettingTile(
-                      Icons.logout_rounded, 
-                      'Log Out', 
+                      context,
+                      Icons.logout_rounded,
+                      'Log Out',
                       isDestructive: true,
                       onTap: () {
                         // Return to Role Selection / Login screen
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(builder: (context) => const RoleSelectionScreen()), 
+                          MaterialPageRoute(
+                            builder: (context) => const RoleSelectionScreen(),
+                          ),
                           (Route<dynamic> route) => false,
                         );
                       },
@@ -168,18 +270,36 @@ class TeacherProfileScreen extends StatelessWidget {
         bottomNavigationBar: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            border: Border(top: BorderSide(color: AppColors.dividerLight, width: 1)),
+            border: Border(
+              top: BorderSide(color: AppColors.dividerLight, width: 1),
+            ),
           ),
           child: SafeArea(
             child: BottomNavigationBar(
               currentIndex: 3, // Profile is index 3
               onTap: (i) {
                 if (i == 0) {
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const TeacherDashboardScreen()));
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TeacherDashboardScreen(),
+                    ),
+                  );
                 } else if (i == 1) {
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const TeacherAttendanceReportScreen()));
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const TeacherAttendanceReportScreen(),
+                    ),
+                  );
                 } else if (i == 2) {
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const TeacherAnalyticsScreen()));
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TeacherAnalyticsScreen(),
+                    ),
+                  );
                 }
                 // If i == 3, do nothing (we are already here)
               },
@@ -188,13 +308,35 @@ class TeacherProfileScreen extends StatelessWidget {
               elevation: 0,
               selectedItemColor: AppColors.primary,
               unselectedItemColor: AppColors.textSecondary,
-              selectedLabelStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
-              unselectedLabelStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w400),
+              selectedLabelStyle: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+              ),
               items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-                BottomNavigationBarItem(icon: Icon(Icons.assignment_turned_in_outlined), activeIcon: Icon(Icons.assignment_turned_in_rounded), label: 'Attendance'),
-                BottomNavigationBarItem(icon: Icon(Icons.analytics_outlined), activeIcon: Icon(Icons.analytics_rounded), label: 'Analytics'),
-                BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.assignment_turned_in_outlined),
+                  activeIcon: Icon(Icons.assignment_turned_in_rounded),
+                  label: 'Attendance',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.analytics_outlined),
+                  activeIcon: Icon(Icons.analytics_rounded),
+                  label: 'Analytics',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline),
+                  activeIcon: Icon(Icons.person),
+                  label: 'Profile',
+                ),
               ],
             ),
           ),
@@ -206,9 +348,23 @@ class TeacherProfileScreen extends StatelessWidget {
   Widget _buildProfileStat(String label, String value) {
     return Column(
       children: [
-        Text(value, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }

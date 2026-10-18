@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+
 import 'theme/app_theme.dart';
+import 'utils/user_session.dart';
 import 'screens/role_selection/role_selection_screen.dart';
 
-void main() => runApp(const HybridAttendanceApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await UserSession.load();
+  runApp(const HybridAttendanceApp());
+}
 
 class HybridAttendanceApp extends StatelessWidget {
   const HybridAttendanceApp({super.key});

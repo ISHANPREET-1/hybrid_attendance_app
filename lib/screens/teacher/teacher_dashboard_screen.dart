@@ -1,5 +1,7 @@
+import '../../utils/app_actions.dart';
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../theme/app_theme.dart';
 
 // Screens for Navigation
@@ -30,11 +32,15 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary),
-            onPressed: () {},
+            onPressed: () => showAppInfo(
+              context,
+              'Local demo',
+              'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+            ),
           ),
-          title: Text(
+          title: const Text(
             'Teacher Dashboard',
-            style: GoogleFonts.inter(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
@@ -43,8 +49,15 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
           centerTitle: true,
           actions: [
             IconButton(
-              icon: const Icon(Icons.notifications_none_rounded, color: AppColors.textPrimary),
-              onPressed: () {},
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: AppColors.textPrimary,
+              ),
+              onPressed: () => showAppInfo(
+                context,
+                'Local demo',
+                'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+              ),
             ),
           ],
         ),
@@ -54,12 +67,16 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             // ── Dynamic Welcome Greeting ──
             const Text(
               'Welcome back,',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'Prof. ${UserSession.teacherName}', // Pulls the real name dynamically!
-              style: GoogleFonts.inter(
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
@@ -71,47 +88,71 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Today's Schedule",
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                const Expanded(
+                  child: Text(
+                    "Today's Schedule",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
                 TextButton(
-                  onPressed: () {},
-                  child: const Text('See all', style: TextStyle(color: AppColors.primary)),
+                  onPressed: () => showAppInfo(
+                    context,
+                    'Local demo',
+                    'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+                  ),
+                  child: const Text(
+                    'See all',
+                    style: TextStyle(color: AppColors.primary),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            const _ScheduleTile(subject: 'Database Management', date: 'June 17'),
-            const _ScheduleTile(subject: 'Operating Systems', date: 'June 17'),
-            
+            _ScheduleTile(
+              subject: 'Database Management',
+              date: DateTime.now().toIso8601String().substring(0, 10),
+            ),
+            _ScheduleTile(
+              subject: 'Operating Systems',
+              date: DateTime.now().toIso8601String().substring(0, 10),
+            ),
+
             const SizedBox(height: 32),
 
             // ── Active Class Panel ──
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Active Class Panel",
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                const Expanded(
+                  child: Text(
+                    "Active Class Panel",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight.withOpacity(0.2),
+                    color: AppColors.primaryLight.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
-                    'Live details',
-                    style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
+                    'Local demo',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
@@ -120,7 +161,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             const _ActiveClassCard(),
           ],
         ),
-        
+
         // ── Bottom Navigation ──
         bottomNavigationBar: _TeacherBottomNav(
           currentIndex: _navIndex,
@@ -148,22 +189,41 @@ class _ScheduleTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A237E), 
+              color: const Color(0xFF1A237E),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.book_rounded, color: Colors.white, size: 24),
+            child: const Icon(
+              Icons.book_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(subject, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16)),
-                Text(date, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                Text(
+                  subject,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  date,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+          const Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.textSecondary,
+          ),
         ],
       ),
     );
@@ -183,9 +243,21 @@ class _ActiveClassCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _buildStat('18', 'students', AppColors.textPrimary),
-              _buildStat('2', 'Present', AppColors.success),
-              _buildStat('1', 'Absent', AppColors.error),
+              _buildStat(
+                UserSession.attendance
+                    .map((r) => r['rollNo'])
+                    .toSet()
+                    .length
+                    .toString(),
+                'students',
+                AppColors.textPrimary,
+              ),
+              _buildStat(
+                UserSession.attendance.length.toString(),
+                'Records',
+                AppColors.success,
+              ),
+              _buildStat('0', 'Verified', AppColors.error),
             ],
           ),
           const SizedBox(height: 24),
@@ -198,7 +270,8 @@ class _ActiveClassCard extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const TeacherAttendanceReportScreen(),
+                        builder: (context) =>
+                            const TeacherAttendanceReportScreen(),
                       ),
                     );
                   },
@@ -206,7 +279,7 @@ class _ActiveClassCard extends StatelessWidget {
                 ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -219,15 +292,29 @@ class _ActiveClassCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 6),
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.05), 
-          border: Border.all(color: color.withOpacity(0.25), width: 1.5), 
+          color: color.withValues(alpha: 0.05),
+          border: Border.all(color: color.withValues(alpha: 0.25), width: 1.5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
-            Text(value, style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, color: color)),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
@@ -239,7 +326,11 @@ class _PanelButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final Color color;
-  const _PanelButton({required this.label, required this.onTap, required this.color});
+  const _PanelButton({
+    required this.label,
+    required this.onTap,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -261,24 +352,44 @@ class _PanelButton extends StatelessWidget {
 class _TeacherBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
-  
-  const _TeacherBottomNav({super.key, required this.currentIndex, required this.onTap});
+
+  const _TeacherBottomNav({required this.currentIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: (i) {
-        onTap(i); 
-        
+        onTap(i);
+
         if (i == 0 && currentIndex != 0) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const TeacherDashboardScreen()));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TeacherDashboardScreen(),
+            ),
+          );
         } else if (i == 1 && currentIndex != 1) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const TeacherAttendanceReportScreen()));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TeacherAttendanceReportScreen(),
+            ),
+          );
         } else if (i == 2 && currentIndex != 2) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const TeacherAnalyticsScreen()));
-        } else if (i == 3 && currentIndex != 3) { 
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const TeacherProfileScreen()));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TeacherAnalyticsScreen(),
+            ),
+          );
+        } else if (i == 3 && currentIndex != 3) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TeacherProfileScreen(),
+            ),
+          );
         }
       },
       type: BottomNavigationBarType.fixed,
@@ -287,9 +398,18 @@ class _TeacherBottomNav extends StatelessWidget {
       unselectedItemColor: AppColors.textSecondary,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.assignment_turned_in_rounded), label: 'Attendance'),
-        BottomNavigationBarItem(icon: Icon(Icons.analytics_rounded), label: 'Analytics'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.assignment_turned_in_rounded),
+          label: 'Attendance',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.analytics_rounded),
+          label: 'Analytics',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
       ],
     );
   }

@@ -1,6 +1,9 @@
+import '../admin/admin_device_approval_screen.dart';
+
 import 'package:flutter/material.dart';
+
 import '../../theme/app_theme.dart';
-import '../student/student_signup_screen.dart'; 
+import '../student/student_signup_screen.dart';
 import '../teacher/teacher_details_screen.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
@@ -12,7 +15,9 @@ class RoleSelectionScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 500), // Limits card width on tablets
+          constraints: const BoxConstraints(
+            maxWidth: 500,
+          ), // Limits card width on tablets
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
@@ -22,10 +27,11 @@ class RoleSelectionScreen extends StatelessWidget {
                   "Select Your Role",
                   style: TextStyle(
                     fontSize: 24,
-                    fontWeight: FontWeight.bold, 
+                    fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                   ),
                 ),
+                const Text('Local demo - no server authentication'),
                 const SizedBox(height: 32),
                 _RoleCard(
                   title: "Student",
@@ -51,6 +57,15 @@ class RoleSelectionScreen extends StatelessWidget {
                       ),
                     );
                   },
+                ),
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AdminDeviceApprovalScreen(),
+                    ),
+                  ),
+                  child: const Text('Device approvals (demo)'),
                 ),
               ],
             ),
@@ -79,7 +94,9 @@ class _RoleCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: double.infinity,
-        constraints: const BoxConstraints(minHeight: 120), // Ensures large touch target
+        constraints: const BoxConstraints(
+          minHeight: 120,
+        ), // Ensures large touch target
         padding: const EdgeInsets.symmetric(vertical: 24),
         decoration: AppDecorations.roleCardDecoration,
         child: Column(

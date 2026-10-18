@@ -1,6 +1,7 @@
+import '../../utils/app_actions.dart';
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../theme/app_theme.dart';
 
 // ── Model ─────────────────────────────────────────────────────────────────────
@@ -21,18 +22,78 @@ class _Student {
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 const _allStudents = [
-  _Student(name: 'Aanya Sharma',    rollNo: '1007521', timestamp: '5:02 PM', status: AttendanceStatus.present),
-  _Student(name: 'Bilal Hassan',    rollNo: '1007753', timestamp: '5:03 PM', status: AttendanceStatus.absent),
-  _Student(name: 'Priya Nair',      rollNo: '1007923', timestamp: '5:01 PM', status: AttendanceStatus.present),
-  _Student(name: 'Dev Patel',       rollNo: '1007533', timestamp: '5:04 PM', status: AttendanceStatus.absent),
-  _Student(name: 'Sara Khan',       rollNo: '1007941', timestamp: '5:05 PM', status: AttendanceStatus.absent),
-  _Student(name: 'Rohan Mehta',     rollNo: '1007851', timestamp: '5:02 PM', status: AttendanceStatus.present),
-  _Student(name: 'Sneha Pillai',    rollNo: '1007753', timestamp: '5:06 PM', status: AttendanceStatus.present),
-  _Student(name: 'Karan Verma',     rollNo: '1007771', timestamp: '5:03 PM', status: AttendanceStatus.absent),
-  _Student(name: 'Fatima Zaidi',    rollNo: '1007882', timestamp: '5:07 PM', status: AttendanceStatus.present),
-  _Student(name: 'Arjun Iyer',      rollNo: '1007634', timestamp: '5:01 PM', status: AttendanceStatus.present),
-  _Student(name: 'Nisha Gupta',     rollNo: '1007910', timestamp: '5:08 PM', status: AttendanceStatus.absent),
-  _Student(name: 'Tarun Bose',      rollNo: '1007456', timestamp: '5:04 PM', status: AttendanceStatus.present),
+  _Student(
+    name: 'Aanya Sharma',
+    rollNo: '1007521',
+    timestamp: '5:02 PM',
+    status: AttendanceStatus.present,
+  ),
+  _Student(
+    name: 'Bilal Hassan',
+    rollNo: '1007753',
+    timestamp: '5:03 PM',
+    status: AttendanceStatus.absent,
+  ),
+  _Student(
+    name: 'Priya Nair',
+    rollNo: '1007923',
+    timestamp: '5:01 PM',
+    status: AttendanceStatus.present,
+  ),
+  _Student(
+    name: 'Dev Patel',
+    rollNo: '1007533',
+    timestamp: '5:04 PM',
+    status: AttendanceStatus.absent,
+  ),
+  _Student(
+    name: 'Sara Khan',
+    rollNo: '1007941',
+    timestamp: '5:05 PM',
+    status: AttendanceStatus.absent,
+  ),
+  _Student(
+    name: 'Rohan Mehta',
+    rollNo: '1007851',
+    timestamp: '5:02 PM',
+    status: AttendanceStatus.present,
+  ),
+  _Student(
+    name: 'Sneha Pillai',
+    rollNo: '1007753',
+    timestamp: '5:06 PM',
+    status: AttendanceStatus.present,
+  ),
+  _Student(
+    name: 'Karan Verma',
+    rollNo: '1007771',
+    timestamp: '5:03 PM',
+    status: AttendanceStatus.absent,
+  ),
+  _Student(
+    name: 'Fatima Zaidi',
+    rollNo: '1007882',
+    timestamp: '5:07 PM',
+    status: AttendanceStatus.present,
+  ),
+  _Student(
+    name: 'Arjun Iyer',
+    rollNo: '1007634',
+    timestamp: '5:01 PM',
+    status: AttendanceStatus.present,
+  ),
+  _Student(
+    name: 'Nisha Gupta',
+    rollNo: '1007910',
+    timestamp: '5:08 PM',
+    status: AttendanceStatus.absent,
+  ),
+  _Student(
+    name: 'Tarun Bose',
+    rollNo: '1007456',
+    timestamp: '5:04 PM',
+    status: AttendanceStatus.present,
+  ),
 ];
 
 // ── Filter enum ───────────────────────────────────────────────────────────────
@@ -50,20 +111,22 @@ class AttendanceReportScreen extends StatefulWidget {
 
 class _AttendanceReportScreenState extends State<AttendanceReportScreen>
     with SingleTickerProviderStateMixin {
-  final _searchCtrl  = TextEditingController();
+  final _searchCtrl = TextEditingController();
   final _searchFocus = FocusNode();
-  _Filter _filter    = _Filter.all;
-  String  _query     = '';
+  _Filter _filter = _Filter.all;
+  String _query = '';
 
   late final AnimationController _fadeCtrl;
-  late final Animation<double>   _fadeAnim;
+  late final Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
     _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text));
     _fadeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 450));
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
   }
@@ -78,10 +141,13 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen>
 
   List<_Student> get _filtered {
     return _allStudents.where((s) {
-      final matchFilter = _filter == _Filter.all ||
-          (_filter == _Filter.present && s.status == AttendanceStatus.present) ||
-          (_filter == _Filter.absent  && s.status == AttendanceStatus.absent);
-      final matchQuery = _query.isEmpty ||
+      final matchFilter =
+          _filter == _Filter.all ||
+          (_filter == _Filter.present &&
+              s.status == AttendanceStatus.present) ||
+          (_filter == _Filter.absent && s.status == AttendanceStatus.absent);
+      final matchQuery =
+          _query.isEmpty ||
           s.name.toLowerCase().contains(_query.toLowerCase()) ||
           s.rollNo.contains(_query);
       return matchFilter && matchQuery;
@@ -90,7 +156,7 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen>
 
   int get _presentCount =>
       _allStudents.where((s) => s.status == AttendanceStatus.present).length;
-  int get _absentCount  =>
+  int get _absentCount =>
       _allStudents.where((s) => s.status == AttendanceStatus.absent).length;
 
   void _showFilterSheet() {
@@ -112,8 +178,8 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark    = context.isDark;
-    final students  = _filtered;
+    final isDark = context.isDark;
+    final students = _filtered;
 
     return Scaffold(
       backgroundColor: context.appBackground,
@@ -176,38 +242,62 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen>
       centerTitle: true,
       leading: IconButton(
         icon: Container(
-          width: 36, height: 36,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: context.appCard,
             borderRadius: BorderRadius.circular(10),
-            boxShadow: isDark ? [] : [
-              BoxShadow(color: AppColors.black.withOpacity(0.06),
-                  blurRadius: 6, offset: const Offset(0, 2)),
-            ],
+            boxShadow: isDark
+                ? []
+                : [
+                    BoxShadow(
+                      color: AppColors.black.withValues(alpha: 0.06),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
-          child: Icon(Icons.arrow_back_ios_new_rounded,
-              size: 16, color: context.appTextPrimary),
+          child: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 16,
+            color: context.appTextPrimary,
+          ),
         ),
-        onPressed: () => context.pop(),
+        onPressed: () => Navigator.pop(context),
       ),
-      title: Text('Attendance Report',
-          style: AppTextStyles.headlineSmall(context.appTextPrimary)),
+      title: Text(
+        'Attendance Report',
+        style: AppTextStyles.headlineSmall(context.appTextPrimary),
+      ),
       actions: [
         IconButton(
           icon: Container(
-            width: 36, height: 36,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: context.appCard,
               borderRadius: BorderRadius.circular(10),
-              boxShadow: isDark ? [] : [
-                BoxShadow(color: AppColors.black.withOpacity(0.06),
-                    blurRadius: 6, offset: const Offset(0, 2)),
-              ],
+              boxShadow: isDark
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: AppColors.black.withValues(alpha: 0.06),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
             ),
-            child: Icon(Icons.download_rounded,
-                size: 17, color: context.appTextPrimary),
+            child: Icon(
+              Icons.download_rounded,
+              size: 17,
+              color: context.appTextPrimary,
+            ),
           ),
-          onPressed: () {},
+          onPressed: () => showAppInfo(
+            context,
+            'Local demo',
+            'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+          ),
         ),
         const SizedBox(width: 4),
       ],
@@ -242,12 +332,17 @@ class _SummaryStrip extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('DSA • Section A',
-                    style: AppTextStyles.headlineSmall(context.appTextPrimary)
-                        .copyWith(fontSize: 14)),
+                Text(
+                  'DSA • Section A',
+                  style: AppTextStyles.headlineSmall(
+                    context.appTextPrimary,
+                  ).copyWith(fontSize: 14),
+                ),
                 const SizedBox(height: 2),
-                Text('Course: 40703  •  5:00 PM  •  June 17',
-                    style: AppTextStyles.bodySmall(context.appTextSecondary)),
+                Text(
+                  'Course: 40703  •  5:00 PM  •  June 17',
+                  style: AppTextStyles.bodySmall(context.appTextSecondary),
+                ),
               ],
             ),
           ),
@@ -273,14 +368,16 @@ class _StatBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value,
-            style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: color,
-                letterSpacing: -0.5)),
-        Text(label,
-            style: AppTextStyles.caption(color.withOpacity(0.8))),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: color,
+            letterSpacing: -0.5,
+          ),
+        ),
+        Text(label, style: AppTextStyles.caption(color.withValues(alpha: 0.8))),
       ],
     );
   }
@@ -317,19 +414,28 @@ class _SearchBar extends StatelessWidget {
               style: AppTextStyles.bodyMedium(context.appTextPrimary),
               decoration: InputDecoration(
                 hintText: 'Search student or roll no.',
-                hintStyle: AppTextStyles.bodyMedium(context.appTextSecondary)
-                    .copyWith(fontSize: 13),
+                hintStyle: AppTextStyles.bodyMedium(
+                  context.appTextSecondary,
+                ).copyWith(fontSize: 13),
                 prefixIcon: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Icon(Icons.search_rounded,
-                      size: 20, color: context.appTextSecondary),
+                  child: Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: context.appTextSecondary,
+                  ),
                 ),
-                prefixIconConstraints:
-                    const BoxConstraints(minWidth: 44, minHeight: 44),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 44,
+                  minHeight: 44,
+                ),
                 suffixIcon: controller.text.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.close_rounded,
-                            size: 18, color: context.appTextSecondary),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: context.appTextSecondary,
+                        ),
                         onPressed: controller.clear,
                       )
                     : null,
@@ -337,8 +443,10 @@ class _SearchBar extends StatelessWidget {
                 fillColor: isDark
                     ? AppColors.inputFillDark
                     : AppColors.inputFillLight,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 13,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
@@ -349,8 +457,10 @@ class _SearchBar extends StatelessWidget {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide:
-                      const BorderSide(color: AppColors.primary, width: 1.5),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -371,26 +481,37 @@ class _SearchBar extends StatelessWidget {
                       : context.appDivider,
                   width: 1,
                 ),
-                boxShadow: isDark ? [] : [
-                  BoxShadow(color: AppColors.black.withOpacity(0.06),
-                      blurRadius: 6, offset: const Offset(0, 2)),
-                ],
+                boxShadow: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: AppColors.black.withValues(alpha: 0.06),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Icon(Icons.tune_rounded,
-                      size: 20,
-                      color: hasActiveFilter
-                          ? AppColors.white
-                          : context.appTextPrimary),
+                  Icon(
+                    Icons.tune_rounded,
+                    size: 20,
+                    color: hasActiveFilter
+                        ? AppColors.white
+                        : context.appTextPrimary,
+                  ),
                   if (hasActiveFilter)
                     Positioned(
-                      top: 8, right: 8,
+                      top: 8,
+                      right: 8,
                       child: Container(
-                        width: 7, height: 7,
+                        width: 7,
+                        height: 7,
                         decoration: const BoxDecoration(
-                            color: AppColors.error, shape: BoxShape.circle),
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
                 ],
@@ -425,7 +546,10 @@ class _FilterChips extends StatelessWidget {
               onTap: () => onSelect(f),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: selected ? AppColors.primary : context.appCard,
                   borderRadius: BorderRadius.circular(20),
@@ -437,8 +561,8 @@ class _FilterChips extends StatelessWidget {
                 child: Text(
                   label,
                   style: AppTextStyles.labelSmall(
-                      selected ? AppColors.white : context.appTextSecondary)
-                      .copyWith(fontWeight: FontWeight.w600),
+                    selected ? AppColors.white : context.appTextSecondary,
+                  ).copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -492,27 +616,35 @@ class _StudentTile extends StatelessWidget {
         color: context.appCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: context.appDivider, width: 1),
-        boxShadow: isDark ? [] : [
-          BoxShadow(color: AppColors.black.withOpacity(0.04),
-              blurRadius: 6, offset: const Offset(0, 2)),
-        ],
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: AppColors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Row(
         children: [
           // Avatar
           Container(
-            width: 42, height: 42,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               color: _avatarColor,
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Text(_initials,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.white,
-                  )),
+              child: Text(
+                _initials,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.white,
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -522,23 +654,36 @@ class _StudentTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(student.name,
-                    style: AppTextStyles.bodyMedium(context.appTextPrimary)
-                        .copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  student.name,
+                  style: AppTextStyles.bodyMedium(
+                    context.appTextPrimary,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    Icon(Icons.badge_outlined,
-                        size: 11, color: context.appTextSecondary),
+                    Icon(
+                      Icons.badge_outlined,
+                      size: 11,
+                      color: context.appTextSecondary,
+                    ),
                     const SizedBox(width: 3),
-                    Text(student.rollNo,
-                        style: AppTextStyles.bodySmall(context.appTextSecondary)),
+                    Text(
+                      student.rollNo,
+                      style: AppTextStyles.bodySmall(context.appTextSecondary),
+                    ),
                     const SizedBox(width: 10),
-                    Icon(Icons.access_time_rounded,
-                        size: 11, color: context.appTextSecondary),
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 11,
+                      color: context.appTextSecondary,
+                    ),
                     const SizedBox(width: 3),
-                    Text(student.timestamp,
-                        style: AppTextStyles.bodySmall(context.appTextSecondary)),
+                    Text(
+                      student.timestamp,
+                      style: AppTextStyles.bodySmall(context.appTextSecondary),
+                    ),
                   ],
                 ),
               ],
@@ -549,16 +694,15 @@ class _StudentTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: isPresent
-                  ? AppColors.successLight
-                  : AppColors.errorLight,
+              color: isPresent ? AppColors.successLight : AppColors.errorLight,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 6, height: 6,
+                  width: 6,
+                  height: 6,
                   decoration: BoxDecoration(
                     color: isPresent ? AppColors.success : AppColors.error,
                     shape: BoxShape.circle,
@@ -568,7 +712,8 @@ class _StudentTile extends StatelessWidget {
                 Text(
                   isPresent ? 'Present' : 'Absent',
                   style: AppTextStyles.caption(
-                      isPresent ? AppColors.success : AppColors.error),
+                    isPresent ? AppColors.success : AppColors.error,
+                  ),
                 ),
               ],
             ),
@@ -592,8 +737,11 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.person_search_rounded,
-              size: 56, color: context.appTextSecondary.withOpacity(0.4)),
+          Icon(
+            Icons.person_search_rounded,
+            size: 56,
+            color: context.appTextSecondary.withValues(alpha: 0.4),
+          ),
           const SizedBox(height: 14),
           Text(
             query.isEmpty ? 'No students found' : 'No results for "$query"',
@@ -624,7 +772,8 @@ class _FilterSheet extends StatelessWidget {
           // Handle
           Center(
             child: Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: context.appDivider,
                 borderRadius: BorderRadius.circular(2),
@@ -632,8 +781,10 @@ class _FilterSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          Text('Filter by Status',
-              style: AppTextStyles.headlineSmall(context.appTextPrimary)),
+          Text(
+            'Filter by Status',
+            style: AppTextStyles.headlineSmall(context.appTextPrimary),
+          ),
           const SizedBox(height: 16),
           ..._Filter.values.map((f) {
             final selected = current == f;
@@ -641,34 +792,43 @@ class _FilterSheet extends StatelessWidget {
             final color = f == _Filter.present
                 ? AppColors.success
                 : f == _Filter.absent
-                    ? AppColors.error
-                    : AppColors.primary;
+                ? AppColors.error
+                : AppColors.primary;
             return ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Container(
-                width: 38, height: 38,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.10),
+                  color: color.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   f == _Filter.present
                       ? Icons.check_circle_outline_rounded
                       : f == _Filter.absent
-                          ? Icons.cancel_outlined
-                          : Icons.people_outline_rounded,
-                  size: 20, color: color,
+                      ? Icons.cancel_outlined
+                      : Icons.people_outline_rounded,
+                  size: 20,
+                  color: color,
                 ),
               ),
-              title: Text(label,
-                  style: AppTextStyles.bodyMedium(context.appTextPrimary)
-                      .copyWith(fontWeight: FontWeight.w500)),
+              title: Text(
+                label,
+                style: AppTextStyles.bodyMedium(
+                  context.appTextPrimary,
+                ).copyWith(fontWeight: FontWeight.w500),
+              ),
               trailing: selected
-                  ? Icon(Icons.check_rounded, color: AppColors.primary, size: 20)
+                  ? const Icon(
+                      Icons.check_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    )
                   : null,
               onTap: () => onSelect(f),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

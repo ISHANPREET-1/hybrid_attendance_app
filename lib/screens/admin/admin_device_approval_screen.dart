@@ -1,6 +1,6 @@
+import '../../utils/app_actions.dart';
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:hybrid_attendance_app/theme/app_theme.dart';
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -8,14 +8,16 @@ import 'package:hybrid_attendance_app/theme/app_theme.dart';
 // ═════════════════════════════════════════════════════════════════════════════
 
 enum RequestType { deviceChange, newDevice }
+
 enum RequestStatus { pending, approved, rejected }
 
 class DeviceRequest {
-  final String id;           // UUID from PostgreSQL
+  final String id; // UUID from PostgreSQL
   final String studentName;
   final String rollNo;
-  final String requestedDeviceId;  // device fingerprint
-  final String currentDeviceId;    // nullable in real DB — empty = new registration
+  final String requestedDeviceId; // device fingerprint
+  final String
+  currentDeviceId; // nullable in real DB — empty = new registration
   final RequestType type;
   final DateTime submittedAt;
   RequestStatus status;
@@ -105,7 +107,9 @@ class _AdminDeviceApprovalScreenState extends State<AdminDeviceApprovalScreen>
   void initState() {
     super.initState();
     _fadeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 450));
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
   }
@@ -135,7 +139,7 @@ class _AdminDeviceApprovalScreenState extends State<AdminDeviceApprovalScreen>
       context,
       title: 'Approve Request?',
       body:
-          'This will bind ${req.studentName}\'s account to\n${req.requestedDeviceId}.',
+          'This updates a sample request only. No device or account will be bound.',
       actionLabel: 'Approve',
       actionColor: AppColors.success,
     );
@@ -144,10 +148,7 @@ class _AdminDeviceApprovalScreenState extends State<AdminDeviceApprovalScreen>
     // Optimistic UI update
     setState(() => req.status = RequestStatus.approved);
 
-    _showSnack(
-      '✓  Approved for ${req.studentName}',
-      AppColors.success,
-    );
+    _showSnack('✓  Approved for ${req.studentName}', AppColors.success);
   }
 
   /// TODO (Arpit): PUT /api/admin/device-requests/{id}/reject
@@ -171,11 +172,14 @@ class _AdminDeviceApprovalScreenState extends State<AdminDeviceApprovalScreen>
   void _showSnack(String msg, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg,
-            style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: AppColors.white)),
+        content: Text(
+          msg,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.white,
+          ),
+        ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -188,7 +192,7 @@ class _AdminDeviceApprovalScreenState extends State<AdminDeviceApprovalScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
-    final items  = _filtered;
+    final items = _filtered;
 
     return Scaffold(
       backgroundColor: context.appBackground,
@@ -209,7 +213,7 @@ class _AdminDeviceApprovalScreenState extends State<AdminDeviceApprovalScreen>
             _TabBar(
               current: _tab,
               counts: {
-                RequestStatus.pending:  _count(RequestStatus.pending),
+                RequestStatus.pending: _count(RequestStatus.pending),
                 RequestStatus.approved: _count(RequestStatus.approved),
                 RequestStatus.rejected: _count(RequestStatus.rejected),
               },
@@ -230,7 +234,7 @@ class _AdminDeviceApprovalScreenState extends State<AdminDeviceApprovalScreen>
                         request: items[i],
                         isDark: isDark,
                         onApprove: () => _onApprove(items[i]),
-                        onReject:  () => _onReject(items[i]),
+                        onReject: () => _onReject(items[i]),
                       ),
                     ),
             ),
@@ -241,49 +245,73 @@ class _AdminDeviceApprovalScreenState extends State<AdminDeviceApprovalScreen>
   }
 
   AppBar _buildAppBar(bool isDark) => AppBar(
-        backgroundColor: context.appBackground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: context.appCard,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: isDark ? [] : [
-                BoxShadow(color: AppColors.black.withOpacity(0.06),
-                    blurRadius: 6, offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Icon(Icons.arrow_back_ios_new_rounded,
-                size: 16, color: context.appTextPrimary),
-          ),
-          onPressed: () => context.pop(),
-        ),
-        title: Text('Admin / Device',
-            style: AppTextStyles.headlineSmall(context.appTextPrimary)),
-        actions: [
-          IconButton(
-            icon: Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                color: context.appCard,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: isDark ? [] : [
-                  BoxShadow(color: AppColors.black.withOpacity(0.06),
-                      blurRadius: 6, offset: const Offset(0, 2)),
+    backgroundColor: context.appBackground,
+    elevation: 0,
+    scrolledUnderElevation: 0,
+    centerTitle: true,
+    leading: IconButton(
+      icon: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: context.appCard,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: AppColors.black.withValues(alpha: 0.06),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
                 ],
-              ),
-              child: Icon(Icons.refresh_rounded,
-                  size: 18, color: context.appTextPrimary),
-            ),
-            // TODO (Arpit): call GET /api/admin/device-requests on tap
-            onPressed: () => setState(() {}),
+        ),
+        child: Icon(
+          Icons.arrow_back_ios_new_rounded,
+          size: 16,
+          color: context.appTextPrimary,
+        ),
+      ),
+      onPressed: () => Navigator.pop(context),
+    ),
+    title: Text(
+      'Device approvals (demo)',
+      style: AppTextStyles.headlineSmall(context.appTextPrimary),
+    ),
+    actions: [
+      IconButton(
+        icon: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: context.appCard,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isDark
+                ? []
+                : [
+                    BoxShadow(
+                      color: AppColors.black.withValues(alpha: 0.06),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
-          const SizedBox(width: 4),
-        ],
-      );
+          child: Icon(
+            Icons.refresh_rounded,
+            size: 18,
+            color: context.appTextPrimary,
+          ),
+        ),
+        // TODO (Arpit): call GET /api/admin/device-requests on tap
+        onPressed: () => showAppInfo(
+          context,
+          'Sample requests',
+          'These requests are sample data. No backend is connected.',
+        ),
+      ),
+      const SizedBox(width: 4),
+    ],
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -313,16 +341,21 @@ class _SummaryStrip extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Device Requests',
-                    style: AppTextStyles.headlineSmall(context.appTextPrimary)
-                        .copyWith(fontSize: 14)),
+                Text(
+                  'Device Requests',
+                  style: AppTextStyles.headlineSmall(
+                    context.appTextPrimary,
+                  ).copyWith(fontSize: 14),
+                ),
                 const SizedBox(height: 2),
-                Text('Single-device binding approvals',
-                    style: AppTextStyles.bodySmall(context.appTextSecondary)),
+                Text(
+                  'Sample requests - no devices are linked',
+                  style: AppTextStyles.bodySmall(context.appTextSecondary),
+                ),
               ],
             ),
           ),
-          _Badge('$pending',  'Pending',  AppColors.warning),
+          _Badge('$pending', 'Pending', AppColors.warning),
           const SizedBox(width: 12),
           _Badge('$approved', 'Approved', AppColors.success),
           const SizedBox(width: 12),
@@ -342,14 +375,16 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     children: [
-      Text(value,
-          style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: color,
-              letterSpacing: -0.5)),
-      Text(label,
-          style: AppTextStyles.caption(color.withOpacity(0.8))),
+      Text(
+        value,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: color,
+          letterSpacing: -0.5,
+        ),
+      ),
+      Text(label, style: AppTextStyles.caption(color.withValues(alpha: 0.8))),
     ],
   );
 }
@@ -370,7 +405,7 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const tabs = [
-      (RequestStatus.pending,  'Pending',  AppColors.warning),
+      (RequestStatus.pending, 'Pending', AppColors.warning),
       (RequestStatus.approved, 'Approved', AppColors.success),
       (RequestStatus.rejected, 'Rejected', AppColors.error),
     ];
@@ -380,7 +415,7 @@ class _TabBar extends StatelessWidget {
       child: Row(
         children: tabs.map((t) {
           final (status, label, color) = t;
-          final sel   = current == status;
+          final sel = current == status;
           final count = counts[status] ?? 0;
           return Expanded(
             child: GestureDetector(
@@ -390,23 +425,31 @@ class _TabBar extends StatelessWidget {
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.symmetric(vertical: 9),
                 decoration: BoxDecoration(
-                  color: sel ? color.withOpacity(0.12) : context.appCard,
+                  color: sel ? color.withValues(alpha: 0.12) : context.appCard,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: sel ? color.withOpacity(0.45) : context.appDivider,
+                    color: sel
+                        ? color.withValues(alpha: 0.45)
+                        : context.appDivider,
                     width: sel ? 1.5 : 1,
                   ),
                 ),
                 child: Column(
                   children: [
-                    Text('$count',
-                        style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: sel ? color : context.appTextSecondary)),
-                    Text(label,
-                        style: AppTextStyles.caption(
-                            sel ? color : context.appTextSecondary)),
+                    Text(
+                      '$count',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: sel ? color : context.appTextSecondary,
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: AppTextStyles.caption(
+                        sel ? color : context.appTextSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -442,11 +485,11 @@ class _RequestCard extends StatelessWidget {
   String get _timeAgo {
     final diff = DateTime.now().difference(request.submittedAt);
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24)   return '${diff.inHours}h ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
     return '${diff.inDays}d ago';
   }
 
-  bool get _isPending  => request.status == RequestStatus.pending;
+  bool get _isPending => request.status == RequestStatus.pending;
   bool get _isApproved => request.status == RequestStatus.approved;
 
   @override
@@ -464,10 +507,15 @@ class _RequestCard extends StatelessWidget {
         color: context.appCard,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: context.appDivider, width: 1),
-        boxShadow: isDark ? [] : [
-          BoxShadow(color: AppColors.black.withOpacity(0.05),
-              blurRadius: 8, offset: const Offset(0, 3)),
-        ],
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: AppColors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
       ),
       child: Column(
         children: [
@@ -479,9 +527,10 @@ class _RequestCard extends StatelessWidget {
               children: [
                 // Avatar
                 Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
                       colors: [AppColors.primary, AppColors.primaryLight],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -489,11 +538,14 @@ class _RequestCard extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Center(
-                    child: Text(_initials,
-                        style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.white)),
+                    child: Text(
+                      _initials,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.white,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -506,32 +558,41 @@ class _RequestCard extends StatelessWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(request.studentName,
-                                style: AppTextStyles.bodyMedium(
-                                        context.appTextPrimary)
-                                    .copyWith(fontWeight: FontWeight.w600)),
+                            child: Text(
+                              request.studentName,
+                              style: AppTextStyles.bodyMedium(
+                                context.appTextPrimary,
+                              ).copyWith(fontWeight: FontWeight.w600),
+                            ),
                           ),
-                          Text(_timeAgo,
-                              style: AppTextStyles.caption(
-                                  context.appTextSecondary)),
+                          Text(
+                            _timeAgo,
+                            style: AppTextStyles.caption(
+                              context.appTextSecondary,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 3),
-                      Row(
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 6,
                         children: [
                           _InfoChip(Icons.badge_outlined, request.rollNo),
-                          const SizedBox(width: 10),
                           // Type pill
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
-                              color: typeColor.withOpacity(0.10),
+                              color: typeColor.withValues(alpha: 0.10),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text(typeLabel,
-                                style:
-                                    AppTextStyles.caption(typeColor)),
+                            child: Text(
+                              typeLabel,
+                              style: AppTextStyles.caption(typeColor),
+                            ),
                           ),
                         ],
                       ),
@@ -542,8 +603,7 @@ class _RequestCard extends StatelessWidget {
                 // Status badge (non-pending)
                 if (!_isPending) ...[
                   const SizedBox(width: 8),
-                  _StatusPill(
-                      isApproved: _isApproved),
+                  _StatusPill(isApproved: _isApproved),
                 ],
               ],
             ),
@@ -584,12 +644,16 @@ class _RequestCard extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(
                     children: [
-                      Icon(Icons.fingerprint_rounded,
-                          size: 12, color: context.appTextSecondary),
+                      Icon(
+                        Icons.fingerprint_rounded,
+                        size: 12,
+                        color: context.appTextSecondary,
+                      ),
                       const SizedBox(width: 4),
-                      Text('Request ID: ${request.id}',
-                          style: AppTextStyles.caption(
-                              context.appTextSecondary)),
+                      Text(
+                        'Request ID: ${request.id}',
+                        style: AppTextStyles.caption(context.appTextSecondary),
+                      ),
                     ],
                   ),
                 ),
@@ -649,9 +713,10 @@ class _DeviceRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 30, height: 30,
+          width: 30,
+          height: 30,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.10),
+            color: color.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: color),
@@ -661,12 +726,16 @@ class _DeviceRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: AppTextStyles.caption(
-                      context.appTextSecondary)),
-              Text(value,
-                  style: AppTextStyles.bodySmall(context.appTextPrimary)
-                      .copyWith(fontWeight: FontWeight.w500)),
+              Text(
+                label,
+                style: AppTextStyles.caption(context.appTextSecondary),
+              ),
+              Text(
+                value,
+                style: AppTextStyles.bodySmall(
+                  context.appTextPrimary,
+                ).copyWith(fontWeight: FontWeight.w500),
+              ),
             ],
           ),
         ),
@@ -699,16 +768,19 @@ class _ActionBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.35), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 17, color: color),
             const SizedBox(width: 6),
-            Text(label,
-                style: AppTextStyles.labelMedium(color)
-                    .copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              label,
+              style: AppTextStyles.labelMedium(
+                color,
+              ).copyWith(fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
@@ -741,12 +813,14 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isApproved ? AppColors.success : AppColors.error;
-    final bg    = isApproved ? AppColors.successLight : AppColors.errorLight;
+    final bg = isApproved ? AppColors.successLight : AppColors.errorLight;
     final label = isApproved ? 'Approved' : 'Rejected';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-          color: bg, borderRadius: BorderRadius.circular(20)),
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Text(label, style: AppTextStyles.caption(color)),
     );
   }
@@ -762,8 +836,11 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final msgs = {
-      RequestStatus.pending:  ('No pending requests', Icons.inbox_rounded),
-      RequestStatus.approved: ('No approved requests yet', Icons.check_circle_outline_rounded),
+      RequestStatus.pending: ('No pending requests', Icons.inbox_rounded),
+      RequestStatus.approved: (
+        'No approved requests yet',
+        Icons.check_circle_outline_rounded,
+      ),
       RequestStatus.rejected: ('No rejected requests', Icons.cancel_outlined),
     };
     final (msg, icon) = msgs[tab]!;
@@ -771,7 +848,11 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 52, color: context.appTextSecondary.withOpacity(0.35)),
+          Icon(
+            icon,
+            size: 52,
+            color: context.appTextSecondary.withValues(alpha: 0.35),
+          ),
           const SizedBox(height: 12),
           Text(msg, style: AppTextStyles.bodyMedium(context.appTextSecondary)),
         ],
@@ -785,39 +866,56 @@ class _EmptyState extends StatelessWidget {
 // ═════════════════════════════════════════════════════════════════════════════
 // ... (Keep your imports and DeviceRequest/mock data code as is)
 
-  // FIX: Updated _showConfirmDialog to be Light-Theme only
-  Future<bool> _showConfirmDialog(
-    BuildContext context, {
-    required String title,
-    required String body,
-    required String actionLabel,
-    required Color actionColor,
-  }) async {
-    return await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: AppColors.cardLight,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(title, style: AppTextStyles.headlineSmall(AppColors.textPrimaryDark)),
-          content: Text(body, style: AppTextStyles.bodyMedium(AppColors.textSecondaryDark)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: AppTextStyles.labelMedium(AppColors.textSecondaryDark)),
+// FIX: Updated _showConfirmDialog to be Light-Theme only
+Future<bool> _showConfirmDialog(
+  BuildContext context, {
+  required String title,
+  required String body,
+  required String actionLabel,
+  required Color actionColor,
+}) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          return AlertDialog(
+            backgroundColor: AppColors.cardLight,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: actionColor,
-                foregroundColor: AppColors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                elevation: 0,
+            title: Text(
+              title,
+              style: AppTextStyles.headlineSmall(AppColors.textPrimaryDark),
+            ),
+            content: Text(
+              body,
+              style: AppTextStyles.bodyMedium(AppColors.textSecondaryDark),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(
+                  'Cancel',
+                  style: AppTextStyles.labelMedium(AppColors.textSecondaryDark),
+                ),
               ),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(actionLabel, style: AppTextStyles.labelMedium(AppColors.white)),
-            ),
-          ],
-        );
-      },
-    ) ?? false;
-  }
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: actionColor,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(
+                  actionLabel,
+                  style: AppTextStyles.labelMedium(AppColors.white),
+                ),
+              ),
+            ],
+          );
+        },
+      ) ??
+      false;
+}

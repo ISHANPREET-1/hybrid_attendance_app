@@ -1,5 +1,6 @@
+import '../../utils/app_actions.dart';
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../theme/app_theme.dart';
 import 'widgets/dashboard_widgets.dart';
@@ -25,13 +26,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
   int _navIndex = 0;
 
   late final AnimationController _fadeCtrl;
-  late final Animation<double>   _fadeAnim;
+  late final Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
     _fadeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
   }
@@ -42,7 +45,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
     super.dispose();
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     // Calculate responsive metrics based on current screen width
     final screenWidth = MediaQuery.of(context).size.width;
@@ -62,7 +65,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
             // ── Body sections ───────────────────────────────────────────
             SliverPadding(
               // Using the dynamic horizontal padding calculated above
-              padding: EdgeInsets.fromLTRB(horizontalPadding, 4, horizontalPadding, 32),
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                4,
+                horizontalPadding,
+                32,
+              ),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   // ── Today's Classes ────────────────────────────────────
@@ -89,23 +97,29 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen>
           if (_navIndex == i) return;
 
           setState(() => _navIndex = i);
-          
+
           if (i == 0) {
             Navigator.popUntil(context, (route) => route.isFirst);
           } else if (i == 1) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const StudentScheduleScreen()),
+              MaterialPageRoute(
+                builder: (context) => const StudentScheduleScreen(),
+              ),
             );
           } else if (i == 2) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const StudentStatsScreen()),
+              MaterialPageRoute(
+                builder: (context) => const StudentStatsScreen(),
+              ),
             );
           } else if (i == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const StudentProfileScreen()),
+              MaterialPageRoute(
+                builder: (context) => const StudentProfileScreen(),
+              ),
             );
           }
         },
@@ -141,7 +155,12 @@ class _DashboardAppBar extends StatelessWidget {
         background: Container(
           color: AppColors.background,
           // Use the responsive padding passed from the parent
-          padding: EdgeInsets.fromLTRB(horizontalPadding, 45, horizontalPadding, 0),
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            45,
+            horizontalPadding,
+            0,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -151,7 +170,7 @@ class _DashboardAppBar extends StatelessWidget {
                 child: Text(
                   'Welcome, ${UserSession.studentName}',
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     fontSize: fontSize,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
@@ -163,7 +182,11 @@ class _DashboardAppBar extends StatelessWidget {
               _IconBtn(
                 icon: Icons.notifications_outlined,
                 badge: true,
-                onTap: () {},
+                onTap: () => showAppInfo(
+                  context,
+                  'Local demo',
+                  'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+                ),
               ),
             ],
           ),
@@ -177,11 +200,7 @@ class _IconBtn extends StatelessWidget {
   final IconData icon;
   final bool badge;
   final VoidCallback onTap;
-  const _IconBtn({
-    required this.icon,
-    required this.onTap,
-    this.badge = false,
-  });
+  const _IconBtn({required this.icon, required this.onTap, this.badge = false});
 
   @override
   Widget build(BuildContext context) {
@@ -197,12 +216,17 @@ class _IconBtn extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                    color: AppColors.black.withOpacity(0.06),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2))
+                  color: AppColors.black.withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
               ],
             ),
-            child: const Icon(Icons.notifications_none_rounded, color: AppColors.textPrimary, size: 22),
+            child: const Icon(
+              Icons.notifications_none_rounded,
+              color: AppColors.textPrimary,
+              size: 22,
+            ),
           ),
           if (badge)
             Positioned(

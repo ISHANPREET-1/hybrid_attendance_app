@@ -1,5 +1,8 @@
+import '../role_selection/role_selection_screen.dart';
+import '../../utils/app_actions.dart';
+
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../theme/app_theme.dart';
 import 'widgets/dashboard_widgets.dart';
 import 'student_dashboard_screen.dart';
@@ -21,9 +24,13 @@ class StudentProfileScreen extends StatelessWidget {
         elevation: 0,
         scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
-        title: Text(
+        title: const Text(
           'Profile',
-          style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
         ),
       ),
       body: Center(
@@ -47,21 +54,35 @@ class StudentProfileScreen extends StatelessWidget {
                       ),
                       child: Center(
                         child: Text(
-                          UserSession.studentName.isNotEmpty ? UserSession.studentName[0].toUpperCase() : 'S',
-                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.primary)
-                        )
+                          UserSession.studentName.isNotEmpty
+                              ? UserSession.studentName[0].toUpperCase()
+                              : 'S',
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       UserSession.studentName,
-                      style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textPrimary)
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${UserSession.studentRollNo} • ${UserSession.studentEmail}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.w500)
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -74,11 +95,38 @@ class StudentProfileScreen extends StatelessWidget {
                 decoration: AppDecorations.card(isDark: false),
                 child: Column(
                   children: [
-                    _ProfileTile(icon: Icons.devices_rounded, title: 'Linked Devices', subtitle: 'Manage your registered phone', onTap: (){}),
+                    _ProfileTile(
+                      icon: Icons.devices_rounded,
+                      title: 'Linked Devices',
+                      subtitle: 'Manage your registered phone',
+                      onTap: () => showAppInfo(
+                        context,
+                        'Local demo',
+                        'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+                      ),
+                    ),
                     const Divider(height: 1, color: AppColors.dividerLight),
-                    _ProfileTile(icon: Icons.notifications_outlined, title: 'Notifications', subtitle: 'Alerts and updates', onTap: (){}),
+                    _ProfileTile(
+                      icon: Icons.notifications_outlined,
+                      title: 'Notifications',
+                      subtitle: 'Alerts and updates',
+                      onTap: () => showAppInfo(
+                        context,
+                        'Local demo',
+                        'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+                      ),
+                    ),
                     const Divider(height: 1, color: AppColors.dividerLight),
-                    _ProfileTile(icon: Icons.help_outline_rounded, title: 'Help & Support', subtitle: 'Contact administration', onTap: (){}),
+                    _ProfileTile(
+                      icon: Icons.help_outline_rounded,
+                      title: 'Help & Support',
+                      subtitle: 'Contact administration',
+                      onTap: () => showAppInfo(
+                        context,
+                        'Local demo',
+                        'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -90,14 +138,31 @@ class StudentProfileScreen extends StatelessWidget {
                 height: 54,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (_) => const RoleSelectionScreen(),
+                      ),
+                      (route) => false,
+                    );
                   },
-                  icon: const Icon(Icons.logout_rounded, color: AppColors.error),
-                  label: Text('Log Out', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.error)),
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    color: AppColors.error,
+                  ),
+                  label: const Text(
+                    'Log Out',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.error,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFCE8E6),
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),
@@ -110,9 +175,30 @@ class StudentProfileScreen extends StatelessWidget {
       bottomNavigationBar: DashboardBottomNav(
         currentIndex: 3,
         onTap: (i) {
-          if (i == 0) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const StudentDashboardScreen()));
-          if (i == 1) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const StudentScheduleScreen()));
-          if (i == 2) Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const StudentStatsScreen()));
+          if (i == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const StudentDashboardScreen(),
+              ),
+            );
+          }
+          if (i == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const StudentScheduleScreen(),
+              ),
+            );
+          }
+          if (i == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const StudentStatsScreen(),
+              ),
+            );
+          }
         },
       ),
     );
@@ -126,21 +212,45 @@ class _ProfileTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  const _ProfileTile({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _ProfileTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      leading: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, color: AppColors.primary, size: 22),
+    return Material(
+      type: MaterialType.transparency,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 22),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: AppColors.textSecondary,
+        ),
+        onTap: onTap,
       ),
-      title: Text(title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-      trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
-      onTap: onTap,
     );
   }
 }

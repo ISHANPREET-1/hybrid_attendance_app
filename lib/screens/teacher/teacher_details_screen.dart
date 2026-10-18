@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../theme/app_theme.dart';
 import 'teacher_dashboard_screen.dart';
 
@@ -32,8 +32,20 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
     'Information Technology',
     'Electronics',
     'Mechanical',
-    'Civil'
+    'Civil',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (UserSession.teacherId != 'FAC-0000') {
+      _nameController.text = UserSession.teacherName;
+      _facultyIdController.text = UserSession.teacherId;
+      if (_departments.contains(UserSession.teacherDept)) {
+        _selectedDept = UserSession.teacherDept;
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -43,13 +55,34 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
     super.dispose();
   }
 
-  void _submitDetails() {
+  Future<void> _submitDetails() async {
+    if (_nameController.text.trim().isEmpty ||
+        _facultyIdController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your name and faculty ID.')),
+      );
+      return;
+    }
     // ── NEW: Save to Global Session ──
     // We check if the field is empty. If they forgot to type a name, it defaults to 'Teacher'.
-    UserSession.teacherName = _nameController.text.isNotEmpty ? _nameController.text : 'Teacher';
-    UserSession.teacherId = _facultyIdController.text.isNotEmpty ? _facultyIdController.text : 'FAC-0000';
+    UserSession.teacherName = _nameController.text.isNotEmpty
+        ? _nameController.text
+        : 'Teacher';
+    UserSession.teacherId = _facultyIdController.text.isNotEmpty
+        ? _facultyIdController.text
+        : 'FAC-0000';
     UserSession.teacherDept = _selectedDept;
 
+    try {
+      await UserSession.save();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save profile. Please retry.')),
+      );
+      return;
+    }
+    if (!mounted) return;
     // Navigate to Teacher Dashboard
     Navigator.pushReplacement(
       context,
@@ -66,7 +99,11 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
           backgroundColor: AppColors.background,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 20),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.textPrimary,
+              size: 20,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -75,9 +112,9 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Faculty Setup',
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
@@ -85,9 +122,9 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Please enter your professional details to set up your teaching dashboard.',
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontSize: 15,
                   color: AppColors.textSecondary,
                   height: 1.4,
@@ -172,12 +209,9 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Continue to Dashboard',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -195,7 +229,7 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
       padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
       child: Text(
         text,
-        style: GoogleFonts.inter(
+        style: const TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
@@ -211,14 +245,17 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
   }) {
     return TextField(
       controller: controller,
-      style: GoogleFonts.inter(fontSize: 15, color: AppColors.textPrimary),
+      style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: AppColors.textDisabledLight),
         prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
         filled: true,
         fillColor: AppColors.cardSurface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.dividerLight),
@@ -252,9 +289,12 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: AppColors.textSecondary,
+          ),
           dropdownColor: AppColors.cardSurface,
-          style: GoogleFonts.inter(fontSize: 15, color: AppColors.textPrimary),
+          style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
           items: items.map((String item) {
             return DropdownMenuItem(
               value: item,

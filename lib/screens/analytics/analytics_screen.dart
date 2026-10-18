@@ -1,7 +1,8 @@
+import '../../utils/app_actions.dart';
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../theme/app_theme.dart';
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -10,55 +11,64 @@ import '../../theme/app_theme.dart';
 
 /// Bar chart: attendance % per subject
 class _SubjectStat {
-  final String subject;    // short label
-  final String fullName;   // tooltip
-  final double percent;    // 0–100
+  final String subject; // short label
+  final String fullName; // tooltip
+  final double percent; // 0–100
   const _SubjectStat(this.subject, this.fullName, this.percent);
 }
 
 const _subjectStats = [
-  _SubjectStat('DSA',  'Data Structures', 88),
-  _SubjectStat('OS',   'Operating Sys.',  72),
-  _SubjectStat('DBMS', 'Database Mgmt',   95),
-  _SubjectStat('CN',   'Computer Nets',   65),
-  _SubjectStat('SE',   'Software Eng.',   80),
-  _SubjectStat('AI',   'Artificial Int.',  58),
+  _SubjectStat('DSA', 'Data Structures', 88),
+  _SubjectStat('OS', 'Operating Sys.', 72),
+  _SubjectStat('DBMS', 'Database Mgmt', 95),
+  _SubjectStat('CN', 'Computer Nets', 65),
+  _SubjectStat('SE', 'Software Eng.', 80),
+  _SubjectStat('AI', 'Artificial Int.', 58),
 ];
 
 /// Line chart: weekly overall attendance trend (Mon–Fri, last 3 weeks)
 class _TrendPoint {
-  final double x;  // week offset
-  final double y;  // percent
+  final double x; // week offset
+  final double y; // percent
   const _TrendPoint(this.x, this.y);
 }
 
 // Week 1
 const _week1 = [
-  _TrendPoint(0, 82), _TrendPoint(1, 75), _TrendPoint(2, 90),
-  _TrendPoint(3, 68), _TrendPoint(4, 85),
+  _TrendPoint(0, 82),
+  _TrendPoint(1, 75),
+  _TrendPoint(2, 90),
+  _TrendPoint(3, 68),
+  _TrendPoint(4, 85),
 ];
 // Week 2
 const _week2 = [
-  _TrendPoint(0, 70), _TrendPoint(1, 80), _TrendPoint(2, 72),
-  _TrendPoint(3, 88), _TrendPoint(4, 78),
+  _TrendPoint(0, 70),
+  _TrendPoint(1, 80),
+  _TrendPoint(2, 72),
+  _TrendPoint(3, 88),
+  _TrendPoint(4, 78),
 ];
 // Week 3 (current)
 const _week3 = [
-  _TrendPoint(0, 88), _TrendPoint(1, 92), _TrendPoint(2, 85),
-  _TrendPoint(3, 95), _TrendPoint(4, 78),
+  _TrendPoint(0, 88),
+  _TrendPoint(1, 92),
+  _TrendPoint(2, 85),
+  _TrendPoint(3, 95),
+  _TrendPoint(4, 78),
 ];
 
 // ── Deep-dark colour tokens local to this screen ──────────────────────────────
-const _bg        = Color(0xFF0D0F18);
-const _card      = Color(0xFF161827);
-const _cardBdr   = Color(0xFF252740);
-const _grid      = Color(0xFF1E2035);
-const _textHi    = Color(0xFFF0F0FF);
-const _textLo    = Color(0xFF7B7E9A);
-const _accent1   = Color(0xFF6C63FF);  // violet – bar primary
-const _accent2   = Color(0xFF00D4AA);  // teal   – line week 3
-const _accent3   = Color(0xFF4C9EFF);  // blue   – line week 2
-const _accent4   = Color(0xFFFF6B8A);  // rose   – line week 1
+const _bg = Color(0xFF0D0F18);
+const _card = Color(0xFF161827);
+const _cardBdr = Color(0xFF252740);
+const _grid = Color(0xFF1E2035);
+const _textHi = Color(0xFFF0F0FF);
+const _textLo = Color(0xFF7B7E9A);
+const _accent1 = Color(0xFF6C63FF); // violet – bar primary
+const _accent2 = Color(0xFF00D4AA); // teal   – line week 3
+const _accent3 = Color(0xFF4C9EFF); // blue   – line week 2
+const _accent4 = Color(0xFFFF6B8A); // rose   – line week 1
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  SCREEN
@@ -72,14 +82,16 @@ class AnalyticsScreen extends StatefulWidget {
 class _AnalyticsScreenState extends State<AnalyticsScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fadeCtrl;
-  late final Animation<double>   _fadeAnim;
+  late final Animation<double> _fadeAnim;
   int _touchedBar = -1;
 
   @override
   void initState() {
     super.initState();
     _fadeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 550));
+      vsync: this,
+      duration: const Duration(milliseconds: 550),
+    );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
   }
@@ -110,7 +122,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             const SizedBox(height: 24),
 
             // ── Bar chart card ───────────────────────────────────────────
-            _SectionLabel('Attendance (%)'),
+            const _SectionLabel('Attendance (%)'),
             const SizedBox(height: 12),
             _ChartCard(
               height: 240,
@@ -124,7 +136,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
             const SizedBox(height: 24),
 
             // ── Line chart card ──────────────────────────────────────────
-            _SectionLabel('Trend Analytics'),
+            const _SectionLabel('Trend Analytics'),
             const SizedBox(height: 12),
             _ChartCard(
               height: 220,
@@ -133,7 +145,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
                 children: [
                   _LineLegend(),
                   const SizedBox(height: 16),
-                  Expanded(child: const _TrendLineChart()),
+                  const Expanded(child: _TrendLineChart()),
                 ],
               ),
             ),
@@ -149,45 +161,57 @@ class _AnalyticsScreenState extends State<AnalyticsScreen>
   }
 
   AppBar _buildAppBar(BuildContext context) => AppBar(
-        backgroundColor: _bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: false,
-        leading: IconButton(
-          icon: Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: _card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: _cardBdr, width: 1),
-            ),
-            child: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 16, color: _textHi),
-          ),
-          onPressed: () => context.pop(),
+    backgroundColor: _bg,
+    elevation: 0,
+    scrolledUnderElevation: 0,
+    centerTitle: false,
+    leading: IconButton(
+      icon: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: _card,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _cardBdr, width: 1),
         ),
-        title: Text('Analytics',
-            style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: _textHi,
-                letterSpacing: -0.3)),
-        actions: [
-          IconButton(
-            icon: Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                color: _card,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _cardBdr, width: 1),
-              ),
-              child: const Icon(Icons.share_rounded, size: 17, color: _textHi),
-            ),
-            onPressed: () {},
+        child: const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          size: 16,
+          color: _textHi,
+        ),
+      ),
+      onPressed: () => Navigator.pop(context),
+    ),
+    title: const Text(
+      'Analytics',
+      style: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        color: _textHi,
+        letterSpacing: -0.3,
+      ),
+    ),
+    actions: [
+      IconButton(
+        icon: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: _card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: _cardBdr, width: 1),
           ),
-          const SizedBox(width: 4),
-        ],
-      );
+          child: const Icon(Icons.share_rounded, size: 17, color: _textHi),
+        ),
+        onPressed: () => showAppInfo(
+          context,
+          'Local demo',
+          'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+        ),
+      ),
+      const SizedBox(width: 4),
+    ],
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -224,13 +248,15 @@ class _PeriodSelectorState extends State<_PeriodSelector> {
                   color: sel ? _accent1 : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(_labels[i],
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight:
-                            sel ? FontWeight.w600 : FontWeight.w400,
-                        color: sel ? AppColors.white : _textLo)),
+                child: Text(
+                  _labels[i],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
+                    color: sel ? AppColors.white : _textLo,
+                  ),
+                ),
               ),
             ),
           );
@@ -246,8 +272,8 @@ class _PeriodSelectorState extends State<_PeriodSelector> {
 class _OverviewRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: const [
+    return const Row(
+      children: [
         Expanded(child: _OverviewChip('Avg.', '79%', _accent2)),
         SizedBox(width: 10),
         Expanded(child: _OverviewChip('Best', '95%', _accent1)),
@@ -269,23 +295,31 @@ class _OverviewChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.10),
+        color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.25), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: GoogleFonts.inter(
-                  fontSize: 11, fontWeight: FontWeight.w500, color: _textLo)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: _textLo,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(value,
-              style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                  letterSpacing: -0.5)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: color,
+              letterSpacing: -0.5,
+            ),
+          ),
         ],
       ),
     );
@@ -300,12 +334,15 @@ class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
 
   @override
-  Widget build(BuildContext context) => Text(text,
-      style: GoogleFonts.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: _textHi,
-          letterSpacing: -0.2));
+  Widget build(BuildContext context) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: _textHi,
+      letterSpacing: -0.2,
+    ),
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -327,7 +364,7 @@ class _ChartCard extends StatelessWidget {
         border: Border.all(color: _cardBdr, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.35),
+            color: Colors.black.withValues(alpha: 0.35),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -365,17 +402,19 @@ class _SubjectBarChart extends StatelessWidget {
               final s = stats[groupIndex];
               return BarTooltipItem(
                 '${s.fullName}\n',
-                GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: _textLo),
+                const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: _textLo,
+                ),
                 children: [
                   TextSpan(
                     text: '${s.percent.toInt()}%',
-                    style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: _accent1),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _accent1,
+                    ),
                   ),
                 ],
               );
@@ -391,11 +430,8 @@ class _SubjectBarChart extends StatelessWidget {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: 25,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: _grid,
-            strokeWidth: 1,
-            dashArray: [4, 4],
-          ),
+          getDrawingHorizontalLine: (_) =>
+              const FlLine(color: _grid, strokeWidth: 1, dashArray: [4, 4]),
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
@@ -406,7 +442,7 @@ class _SubjectBarChart extends StatelessWidget {
               reservedSize: 34,
               getTitlesWidget: (v, _) => Text(
                 '${v.toInt()}%',
-                style: GoogleFonts.inter(fontSize: 10, color: _textLo),
+                style: const TextStyle(fontSize: 10, color: _textLo),
               ),
             ),
           ),
@@ -418,24 +454,29 @@ class _SubjectBarChart extends StatelessWidget {
                 if (i < 0 || i >= stats.length) return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text(stats[i].subject,
-                      style: GoogleFonts.inter(
-                          fontSize: 10,
-                          color: i == touched ? _accent1 : _textLo,
-                          fontWeight: i == touched
-                              ? FontWeight.w600
-                              : FontWeight.w400)),
+                  child: Text(
+                    stats[i].subject,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: i == touched ? _accent1 : _textLo,
+                      fontWeight: i == touched
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                    ),
+                  ),
                 );
               },
             ),
           ),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
         barGroups: stats.asMap().entries.map((e) {
-          final i    = e.key;
+          final i = e.key;
           final stat = e.value;
           final isTouched = i == touched;
           final pct = stat.percent;
@@ -444,8 +485,8 @@ class _SubjectBarChart extends StatelessWidget {
           final barColor = pct < 70
               ? _accent4
               : pct < 85
-                  ? _accent3
-                  : _accent1;
+              ? _accent3
+              : _accent1;
 
           return BarChartGroupData(
             x: i,
@@ -455,10 +496,7 @@ class _SubjectBarChart extends StatelessWidget {
                 width: isTouched ? 18 : 14,
                 borderRadius: BorderRadius.circular(6),
                 gradient: LinearGradient(
-                  colors: [
-                    barColor.withOpacity(0.6),
-                    barColor,
-                  ],
+                  colors: [barColor.withValues(alpha: 0.6), barColor],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                 ),
@@ -483,12 +521,12 @@ class _SubjectBarChart extends StatelessWidget {
 class _LineLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       children: [
         _LegendDot(_accent4, 'Week 1'),
-        const SizedBox(width: 16),
+        SizedBox(width: 16),
         _LegendDot(_accent3, 'Week 2'),
-        const SizedBox(width: 16),
+        SizedBox(width: 16),
         _LegendDot(_accent2, 'Week 3'),
       ],
     );
@@ -504,15 +542,15 @@ class _LegendDot extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: [
       Container(
-        width: 24, height: 3,
+        width: 24,
+        height: 3,
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(2),
         ),
       ),
       const SizedBox(width: 6),
-      Text(label,
-          style: GoogleFonts.inter(fontSize: 11, color: _textLo)),
+      Text(label, style: const TextStyle(fontSize: 11, color: _textLo)),
     ],
   );
 }
@@ -523,11 +561,7 @@ class _LegendDot extends StatelessWidget {
 class _TrendLineChart extends StatelessWidget {
   const _TrendLineChart();
 
-  LineChartBarData _line(
-    List<_TrendPoint> pts,
-    Color color,
-    bool showDots,
-  ) {
+  LineChartBarData _line(List<_TrendPoint> pts, Color color, bool showDots) {
     return LineChartBarData(
       spots: pts.map((p) => FlSpot(p.x, p.y)).toList(),
       isCurved: true,
@@ -547,7 +581,10 @@ class _TrendLineChart extends StatelessWidget {
       belowBarData: BarAreaData(
         show: showDots, // only fill the active (week 3) line
         gradient: LinearGradient(
-          colors: [color.withOpacity(0.25), color.withOpacity(0.00)],
+          colors: [
+            color.withValues(alpha: 0.25),
+            color.withValues(alpha: 0.00),
+          ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
@@ -566,7 +603,7 @@ class _TrendLineChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: 10,
           getDrawingHorizontalLine: (_) =>
-              FlLine(color: _grid, strokeWidth: 1, dashArray: [4, 4]),
+              const FlLine(color: _grid, strokeWidth: 1, dashArray: [4, 4]),
         ),
         borderData: FlBorderData(show: false),
         lineTouchData: LineTouchData(
@@ -575,13 +612,14 @@ class _TrendLineChart extends StatelessWidget {
             tooltipRoundedRadius: 10,
             getTooltipItems: (spots) => spots.map((s) {
               final colors = [_accent4, _accent3, _accent2];
-              final idx    = s.barIndex.clamp(0, 2);
+              final idx = s.barIndex.clamp(0, 2);
               return LineTooltipItem(
                 '${s.y.toInt()}%',
-                GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: colors[idx]),
+                TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: colors[idx],
+                ),
               );
             }).toList(),
           ),
@@ -594,7 +632,7 @@ class _TrendLineChart extends StatelessWidget {
               reservedSize: 34,
               getTitlesWidget: (v, _) => Text(
                 '${v.toInt()}%',
-                style: GoogleFonts.inter(fontSize: 10, color: _textLo),
+                style: const TextStyle(fontSize: 10, color: _textLo),
               ),
             ),
           ),
@@ -607,17 +645,20 @@ class _TrendLineChart extends StatelessWidget {
                 if (i < 0 || i >= days.length) return const SizedBox.shrink();
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text(days[i],
-                      style: GoogleFonts.inter(
-                          fontSize: 10, color: _textLo)),
+                  child: Text(
+                    days[i],
+                    style: const TextStyle(fontSize: 10, color: _textLo),
+                  ),
                 );
               },
             ),
           ),
           rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false)),
+            sideTitles: SideTitles(showTitles: false),
+          ),
           topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false)),
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
         lineBarsData: [
           _line(_week1, _accent4, false),
@@ -635,7 +676,7 @@ class _TrendLineChart extends StatelessWidget {
 class _BottomStatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       children: [
         Expanded(
           child: _BottomStatCard(
@@ -646,7 +687,7 @@ class _BottomStatsRow extends StatelessWidget {
             color: _accent1,
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Expanded(
           child: _BottomStatCard(
             label: 'Streak',
@@ -656,7 +697,7 @@ class _BottomStatsRow extends StatelessWidget {
             color: _accent4,
           ),
         ),
-        const SizedBox(width: 10),
+        SizedBox(width: 10),
         Expanded(
           child: _BottomStatCard(
             label: 'On Track',
@@ -698,26 +739,40 @@ class _BottomStatCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 34, height: 34,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, size: 18, color: color),
           ),
           const SizedBox(height: 10),
-          Text(value,
-              style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: _textHi,
-                  letterSpacing: -0.5)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: _textHi,
+              letterSpacing: -0.5,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label,
-              style: GoogleFonts.inter(
-                  fontSize: 11, fontWeight: FontWeight.w500, color: _textLo)),
-          Text(sub,
-              style: GoogleFonts.inter(fontSize: 10, color: _textLo.withOpacity(0.6))),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: _textLo,
+            ),
+          ),
+          Text(
+            sub,
+            style: TextStyle(
+              fontSize: 10,
+              color: _textLo.withValues(alpha: 0.6),
+            ),
+          ),
         ],
       ),
     );
