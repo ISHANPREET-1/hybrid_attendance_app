@@ -74,7 +74,7 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
     UserSession.teacherDept = _selectedDept;
 
     try {
-      await UserSession.save();
+      await UserSession.save(role: 'teacher');
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

@@ -116,6 +116,22 @@ class _TeacherAttendanceReportScreenState
     );
   }
 
+  void _recordsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    UserSession.revision.addListener(_recordsChanged);
+  }
+
+  @override
+  void dispose() {
+    UserSession.revision.removeListener(_recordsChanged);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final studentsToDisplay = _filteredStudents;

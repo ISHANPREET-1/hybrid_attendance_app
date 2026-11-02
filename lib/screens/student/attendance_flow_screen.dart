@@ -55,7 +55,7 @@ class _AttendanceFlowScreenState extends State<AttendanceFlowScreen> {
                 child: Padding(
                   padding: EdgeInsets.all(20),
                   child: Text(
-                    'Local demo: attendance is stored on this device. Classroom Wi-Fi, device approval and physical presence are not verified. Verified attendance requires a backend and platform integrations.',
+                    'Attendance is saved to the local server and shared with teacher reports. Classroom Wi-Fi, device approval and physical presence are not verified.',
                   ),
                 ),
               ),
@@ -63,7 +63,7 @@ class _AttendanceFlowScreenState extends State<AttendanceFlowScreen> {
               if (recorded)
                 const ListTile(
                   leading: Icon(Icons.check_circle, color: Colors.green),
-                  title: Text('Demo attendance recorded for today'),
+                  title: Text('Attendance recorded for today'),
                 ),
               if (_error != null)
                 Text(_error!, style: const TextStyle(color: Colors.red)),
@@ -74,7 +74,7 @@ class _AttendanceFlowScreenState extends State<AttendanceFlowScreen> {
                       ? 'Saving...'
                       : recorded
                       ? 'Recorded'
-                      : 'Record demo attendance',
+                      : 'Record attendance',
                 ),
               ),
               TextButton(

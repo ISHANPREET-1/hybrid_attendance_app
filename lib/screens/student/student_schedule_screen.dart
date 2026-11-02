@@ -45,7 +45,7 @@ class StudentScheduleScreen extends StatelessWidget {
           ),
         ),
         title: const Text(
-          'Today\'s Schedule',
+          'Sample Class Schedule',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w700,

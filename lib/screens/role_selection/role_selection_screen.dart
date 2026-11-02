@@ -31,7 +31,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const Text('Local demo - no server authentication'),
+                const Text('Local server edition - no login authentication'),
                 const SizedBox(height: 32),
                 _RoleCard(
                   title: "Student",

@@ -22,6 +22,22 @@ class TeacherDashboardScreen extends StatefulWidget {
 class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
   int _navIndex = 0;
 
+  void _recordsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    UserSession.revision.addListener(_recordsChanged);
+  }
+
+  @override
+  void dispose() {
+    UserSession.revision.removeListener(_recordsChanged);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -35,7 +51,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             onPressed: () => showAppInfo(
               context,
               'Local demo',
-              'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+              'This control is not implemented yet. Profile saving, attendance recording and reports are connected to the local server.',
             ),
           ),
           title: const Text(
@@ -56,7 +72,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               onPressed: () => showAppInfo(
                 context,
                 'Local demo',
-                'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+                'This control is not implemented yet. Profile saving, attendance recording and reports are connected to the local server.',
               ),
             ),
           ],
@@ -102,7 +118,7 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   onPressed: () => showAppInfo(
                     context,
                     'Local demo',
-                    'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+                    'This control is not implemented yet. Profile saving, attendance recording and reports are connected to the local server.',
                   ),
                   child: const Text(
                     'See all',

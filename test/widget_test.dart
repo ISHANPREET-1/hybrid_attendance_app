@@ -12,11 +12,13 @@ import 'package:hybrid_attendance_app/screens/teacher/teacher_analytics_screen.d
 import 'package:hybrid_attendance_app/screens/teacher/teacher_profile_screen.dart';
 
 import 'package:hybrid_attendance_app/utils/user_session.dart';
+import 'package:hybrid_attendance_app/utils/backend_api.dart';
 import 'package:hybrid_attendance_app/screens/student/attendance_flow_screen.dart';
 import 'package:hybrid_attendance_app/screens/teacher/teacher_attendance_report_screen.dart';
 
 void main() {
   setUp(() async {
+    BackendApi.enabled = false;
     SharedPreferences.setMockInitialValues({});
     await UserSession.load();
     UserSession.studentName = 'Test Student';
@@ -51,9 +53,9 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(const MaterialApp(home: AttendanceFlowScreen()));
-    await tester.tap(find.text('Record demo attendance'));
+    await tester.tap(find.text('Record attendance'));
     await tester.pumpAndSettle();
-    expect(find.text('Demo attendance recorded for today'), findsOneWidget);
+    expect(find.text('Attendance recorded for today'), findsOneWidget);
     expect(UserSession.attendance.length, 1);
     await tester.pumpWidget(
       const MaterialApp(home: TeacherAttendanceReportScreen()),
@@ -89,5 +91,27 @@ void main() {
         reason: screen.runtimeType.toString(),
       );
     }
+  });
+
+  testWidgets('An open teacher report updates when server records change', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: TeacherAttendanceReportScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Remote Student'), findsNothing);
+    UserSession.attendance.add({
+      'name': 'Remote Student',
+      'rollNo': 'REMOTE-1',
+      'subject': 'OS',
+      'courseCode': '82703',
+      'date': '2026-11-02',
+      'time': '12:30',
+    });
+    UserSession.revision.value++;
+    await tester.pumpAndSettle();
+    expect(find.text('Remote Student'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

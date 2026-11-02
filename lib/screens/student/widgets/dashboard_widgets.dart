@@ -106,7 +106,7 @@ class TodaysClassesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: "Today's Classes"),
+        const SectionHeader(title: "Sample Classes"),
         ...kTodaysClasses.map(
           (c) => InkWell(
             onTap: c.status == ClassStatus.open
@@ -239,7 +239,7 @@ class AttendanceSummarySection extends StatelessWidget {
                   valueListenable: UserSession.revision,
                   builder: (_, value, child) => Center(
                     child: Text(
-                      '${UserSession.attendance.where((r) => r['rollNo'] == UserSession.studentRollNo).length} demo records',
+                      '${UserSession.attendance.where((r) => r['rollNo'] == UserSession.studentRollNo).length} attendance records',
                       textAlign: TextAlign.center,
                     ),
                   ),

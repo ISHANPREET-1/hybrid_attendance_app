@@ -296,7 +296,7 @@ class _AttendanceReportScreenState extends State<AttendanceReportScreen>
           onPressed: () => showAppInfo(
             context,
             'Local demo',
-            'This feature requires a connected backend. Profiles and demo attendance are saved locally.',
+            'This control is not implemented yet. Profile saving, attendance recording and reports are connected to the local server.',
           ),
         ),
         const SizedBox(width: 4),
