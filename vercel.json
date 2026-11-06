@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "bash scripts/build-web.sh",
+  "outputDirectory": "build/web",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{.tools/**,.git/**,.env*,backend/data/**,build/**,test/**,android/**,ios/**,windows/**,linux/**,macos/**}"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api?route=:path*" }
+  ]
+}

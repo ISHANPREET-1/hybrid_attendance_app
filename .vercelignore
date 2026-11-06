@@ -1,0 +1,9 @@
+.tools/
+.git/
+.dart_tool/
+.env
+.env.*
+backend/data/
+build/
+coverage/
+__pycache__/

@@ -48,3 +48,7 @@ app.*.map.json
 .tools/
 backend/data/
 __pycache__/
+.env
+.env.*
+!.env.example
+.vercel/

@@ -1,51 +1,58 @@
 import 'package:flutter/material.dart';
+import 'screens/portal.dart';
+import 'utils/portal_store.dart';
 
-import 'dart:async';
-
-import 'theme/app_theme.dart';
-import 'utils/user_session.dart';
-import 'screens/role_selection/role_selection_screen.dart';
-
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await UserSession.load();
-  // Local preferences retain profile form values; attendance comes from SQLite.
-  UserSession.attendance.clear();
-  await UserSession.refresh();
-  Timer.periodic(const Duration(seconds: 5), (_) => UserSession.refresh());
   runApp(const HybridAttendanceApp());
 }
 
-class HybridAttendanceApp extends StatelessWidget {
-  const HybridAttendanceApp({super.key});
+class HybridAttendanceApp extends StatefulWidget {
+  final PortalStore? store;
+  const HybridAttendanceApp({super.key, this.store});
+  @override
+  State<HybridAttendanceApp> createState() => _HybridAttendanceAppState();
+}
+
+class _HybridAttendanceAppState extends State<HybridAttendanceApp> {
+  late final PortalStore store;
+  @override
+  void initState() {
+    super.initState();
+    store = widget.store ?? PortalStore();
+    if (widget.store == null) store.initialize();
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Hybrid Attendance',
-      theme: AppTheme.lightTheme,
-      builder: (context, child) => Column(
-        children: [
-          ValueListenableBuilder<String?>(
-            valueListenable: UserSession.backendError,
-            builder: (context, error, _) => error == null
-                ? const SizedBox.shrink()
-                : Material(
-                    color: Colors.amber.shade100,
-                    child: SafeArea(
-                      bottom: false,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(error),
-                      ),
-                    ),
-                  ),
-          ),
-          Expanded(child: child!),
-        ],
-      ),
-      home: const RoleSelectionScreen(),
-    );
+  void dispose() {
+    if (widget.store == null) store.dispose();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'Hybrid Attendance',
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      useMaterial3: true,
+      colorSchemeSeed: const Color(0xff197565),
+      scaffoldBackgroundColor: const Color(0xfff4f7f6),
+      inputDecorationTheme: const InputDecorationTheme(
+        border: OutlineInputBorder(),
+      ),
+    ),
+    home: ListenableBuilder(
+      listenable: store,
+      builder: (context, _) {
+        if (store.loading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return store.user == null
+            ? AuthScreen(store: store)
+            : PortalScreen(key: ValueKey(store.user!['id']), store: store);
+      },
+    ),
+  );
 }

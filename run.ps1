@@ -4,6 +4,16 @@ Set-Location -LiteralPath $PSScriptRoot
 $pythonCommand = Get-Command python -ErrorAction Stop
 $logDirectory = Join-Path $PSScriptRoot '.tools'
 New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+$venvPython = Join-Path $PSScriptRoot '.tools/venv/Scripts/python.exe'
+if (-not (Test-Path -LiteralPath $venvPython)) {
+    & $pythonCommand.Source -m venv .tools/venv
+    if ($LASTEXITCODE -ne 0) { throw 'Could not create backend virtual environment.' }
+}
+& $venvPython -c "import sqlalchemy, psycopg, argon2, dotenv" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    & $venvPython -m pip install -r requirements.txt
+    if ($LASTEXITCODE -ne 0) { throw 'Backend dependency installation failed.' }
+}
 if (-not $SkipBuild) {
     $flutterCommand = Get-Command flutter -ErrorAction SilentlyContinue
     if ($flutterCommand) {
@@ -24,7 +34,7 @@ if (-not $SkipBuild) {
         $env:FLUTTER_LINUX = 'false'
         & $flutterPath --no-version-check pub get
         if ($LASTEXITCODE -ne 0) { throw 'Flutter dependency installation failed.' }
-        & $flutterPath --no-version-check build web
+        & $flutterPath --no-version-check build web --no-web-resources-cdn
         if ($LASTEXITCODE -ne 0) { throw 'Flutter web build failed.' }
     } finally {
         $env:FLUTTER_WINDOWS = $previousWindows
@@ -35,7 +45,7 @@ if (-not (Test-Path -LiteralPath 'build/web/index.html')) {
     throw 'No web build exists. Run without -SkipBuild first.'
 }
 if ($Background) {
-    $appProcess = Start-Process -FilePath $pythonCommand.Source `
+    $appProcess = Start-Process -FilePath $venvPython `
         -ArgumentList "backend/server.py --port $Port" `
         -WorkingDirectory $PSScriptRoot -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logDirectory 'app.stdout.log') `
@@ -43,5 +53,5 @@ if ($Background) {
     $appProcess.Id | Set-Content (Join-Path $logDirectory 'app-process.pid')
     Write-Host "Hybrid Attendance starting at http://127.0.0.1:$Port (PID $($appProcess.Id))"
 } else {
-    & $pythonCommand.Source backend/server.py --port $Port
+    & $venvPython backend/server.py --port $Port
 }

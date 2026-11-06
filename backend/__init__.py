@@ -1,0 +1,1 @@
+"""Hybrid Attendance application backend."""

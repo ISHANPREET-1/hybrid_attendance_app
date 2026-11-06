@@ -1,77 +1,108 @@
 import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hybrid_attendance_app/utils/backend_api.dart';
-import 'package:hybrid_attendance_app/utils/user_session.dart';
+import 'package:hybrid_attendance_app/utils/portal_store.dart';
 
 void main() {
-  setUp(() async {
-    SharedPreferences.setMockInitialValues({});
-    BackendApi.enabled = true;
-    UserSession.attendance.clear();
-    UserSession.studentRollNo = 'TEST-1';
-    UserSession.studentName = 'Test Student';
-  });
-
   tearDown(() {
+    BackendApi.csrf = null;
     BackendApi.client.close();
     BackendApi.client = http.Client();
-    BackendApi.enabled = false;
-    UserSession.backendError.value = null;
-  });
-
-  test('Attendance uses the API and the server-authoritative record', () async {
-    BackendApi.client = MockClient((request) async {
-      expect(request.url.path, '/api/attendance');
-      expect(request.method, 'POST');
-      expect(jsonDecode(request.body)['rollNo'], 'TEST-1');
-      return http.Response(
-        jsonEncode({
-          'record': {
-            'name': 'Server Name',
-            'rollNo': 'TEST-1',
-            'subject': 'OS',
-            'courseCode': '82703',
-            'date': '2026-11-02',
-            'time': '12:30',
-          },
-        }),
-        201,
-      );
-    });
-    await UserSession.recordAttendance('OS', '82703');
-    expect(UserSession.attendance.single['name'], 'Server Name');
-  });
-
-  test('A failed attendance request never creates a local success', () async {
-    BackendApi.client = MockClient(
-      (_) async => http.Response('{"error":"Database unavailable"}', 500),
-    );
-    await expectLater(
-      UserSession.recordAttendance('OS', '82703'),
-      throwsStateError,
-    );
-    expect(UserSession.attendance, isEmpty);
   });
 
   test(
-    'Server refresh replaces browser records and exposes network errors',
+    'Login uses server-assigned role, loads state and sends CSRF on mutations',
     () async {
-      UserSession.attendance.add({'name': 'Old browser record'});
-      BackendApi.client = MockClient(
-        (_) async => http.Response('{"records":[]}', 200),
-      );
-      await UserSession.refresh();
-      expect(UserSession.attendance, isEmpty);
-      expect(UserSession.backendError.value, isNull);
+      final user = {
+        'id': 'student-1',
+        'name': 'Student',
+        'email': 'student@college.test',
+        'role': 'student',
+      };
+      final requested = <String>[];
+      BackendApi.client = MockClient((req) async {
+        requested.add(req.url.path);
+        if (req.url.path == '/api/auth/login') {
+          expect(jsonDecode(req.body)['email'], 'student@college.test');
+          return http.Response(
+            jsonEncode({'user': user, 'csrf': 'csrf-secret'}),
+            200,
+          );
+        }
+        if (req.url.path == '/api/profile') {
+          expect(req.headers['X-CSRF-Token'], 'csrf-secret');
+          return http.Response('{"message":"Saved"}', 200);
+        }
+        return http.Response(
+          jsonEncode({'user': user, 'courses': [], 'reports': []}),
+          200,
+        );
+      });
+      final store = PortalStore();
+      await store.authenticate('login', {
+        'email': 'student@college.test',
+        'password': 'password',
+      });
+      expect(store.user!['role'], 'student');
+      expect(BackendApi.csrf, 'csrf-secret');
+      await store.mutate('profile', {'name': 'Updated'});
+      expect(requested, contains('/api/profile'));
+      store.dispose();
+    },
+  );
+
+  test('Expired session clears all previously loaded private state', () async {
+    BackendApi.client = MockClient(
+      (_) async => http.Response('{"error":"Session expired"}', 401),
+    );
+    final store = PortalStore()
+      ..user = {'id': '1', 'role': 'admin'}
+      ..state = {
+        'users': [
+          {'email': 'private'},
+        ],
+      };
+    await store.refresh();
+    expect(store.user, isNull);
+    expect(store.state, isEmpty);
+    store.dispose();
+  });
+
+  test('Failed write throws an actionable server error', () async {
+    BackendApi.client = MockClient(
+      (_) async => http.Response('{"error":"Browser needs approval"}', 403),
+    );
+    await expectLater(
+      BackendApi.request('attendance', {'session_id': 's'}),
+      throwsA(
+        isA<ApiException>().having(
+          (e) => e.message,
+          'message',
+          'Browser needs approval',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'Connection errors retain the last loaded records with a visible error',
+    () async {
       BackendApi.client = MockClient(
         (_) async => throw http.ClientException('Offline'),
       );
-      await UserSession.refresh();
-      expect(UserSession.backendError.value, isNotNull);
+      final store = PortalStore()
+        ..user = {'id': '1'}
+        ..state = {
+          'reports': [
+            {'name': 'Saved record'},
+          ],
+        };
+      await store.refresh();
+      expect(store.error, isNotNull);
+      expect(store.list('reports').length, 1);
+      store.dispose();
     },
   );
 }

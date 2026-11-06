@@ -1,117 +1,183 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hybrid_attendance_app/main.dart';
-import 'package:hybrid_attendance_app/screens/admin/admin_device_approval_screen.dart';
-import 'package:hybrid_attendance_app/screens/student/student_dashboard_screen.dart';
-import 'package:hybrid_attendance_app/screens/student/student_schedule_screen.dart';
-import 'package:hybrid_attendance_app/screens/student/student_stats_screen.dart';
-import 'package:hybrid_attendance_app/screens/student/student_profile_screen.dart';
-import 'package:hybrid_attendance_app/screens/teacher/teacher_dashboard_screen.dart';
-import 'package:hybrid_attendance_app/screens/teacher/teacher_analytics_screen.dart';
-import 'package:hybrid_attendance_app/screens/teacher/teacher_profile_screen.dart';
+import 'package:hybrid_attendance_app/utils/portal_store.dart';
 
-import 'package:hybrid_attendance_app/utils/user_session.dart';
-import 'package:hybrid_attendance_app/utils/backend_api.dart';
-import 'package:hybrid_attendance_app/screens/student/attendance_flow_screen.dart';
-import 'package:hybrid_attendance_app/screens/teacher/teacher_attendance_report_screen.dart';
+PortalStore session(String role) {
+  final store = PortalStore()..loading = false;
+  store.user = {
+    'id': 'u1',
+    'name': 'Test User',
+    'role': role,
+    'email': 'test@college.test',
+    'roll_no': role == 'student' ? 'CS001' : null,
+    'department': 'Computer Science',
+    'mobile': '',
+  };
+  store.state = {
+    'server_time': 1793898000,
+    'courses': [
+      {
+        'id': 'c1',
+        'code': 'OS101',
+        'title': 'Operating Systems',
+        'teacher_id': 't1',
+        'room': 'Lab 3B',
+        'archived': 0,
+      },
+    ],
+    'sessions': [
+      {
+        'id': 's1',
+        'course_id': 'c1',
+        'status': 'open',
+        'starts_at': 1793897000,
+        'ends_at': 1793899000,
+        'latitude': null,
+        'network_required': 0,
+        if (role != 'student') 'code': '123456',
+        if (role != 'student') 'code_expires_at': 1793898030,
+      },
+    ],
+    'reports': [
+      {
+        'student_id': 'u1',
+        'name': 'Test User',
+        'roll_no': 'CS001',
+        'course_code': 'OS101',
+        'title': 'Operating Systems',
+        'date': '2026-11-05',
+        'session_id': 's1',
+        'status': 'open',
+        'ends_at': 1793899000,
+        'recorded_at': null,
+        'attendance_status': 'Pending',
+      },
+    ],
+    'roster': [
+      {
+        'id': 'e1',
+        'course_id': 'c1',
+        'student_id': 'u1',
+        'name': 'Test User',
+        'email': 'test@college.test',
+        'roll_no': 'CS001',
+      },
+    ],
+    'devices': [
+      {
+        'id': 'd1',
+        'user_id': 'u1',
+        'name': 'Test User',
+        'email': 'test@college.test',
+        'label': 'Phone Chrome',
+        'status': 'pending',
+        'created_at': 1793897000,
+      },
+    ],
+    'notices': [
+      {
+        'id': 'n1',
+        'course_id': 'c1',
+        'body': 'Bring your lab notebook',
+        'created_at': 1793897000,
+      },
+    ],
+    'users': [
+      {
+        'id': 't1',
+        'name': 'Teacher',
+        'email': 'teacher@college.test',
+        'role': 'teacher',
+        'roll_no': null,
+      },
+    ],
+    'audit': [],
+    'current_device_id': 'd1',
+    'campus_network_available': false,
+  };
+  return store;
+}
 
 void main() {
-  setUp(() async {
-    BackendApi.enabled = false;
-    SharedPreferences.setMockInitialValues({});
-    await UserSession.load();
-    UserSession.studentName = 'Test Student';
-    UserSession.studentRollNo = '12345';
-  });
-
-  testWidgets('Role selector opens student registration', (tester) async {
-    await tester.pumpWidget(const HybridAttendanceApp());
-    await tester.tap(find.text('Student'));
+  testWidgets('Login and registration dialog display without a role selector', (
+    tester,
+  ) async {
+    final store = PortalStore()
+      ..loading = false
+      ..setupRequired = true;
+    addTearDown(store.dispose);
+    await tester.pumpWidget(HybridAttendanceApp(store: store));
+    expect(find.text('Hybrid Attendance'), findsOneWidget);
+    expect(find.text('First administrator setup'), findsOneWidget);
+    await tester.tap(find.text('Create an account'));
     await tester.pumpAndSettle();
-    expect(find.byType(TextFormField), findsWidgets);
+    await tester.tap(find.widgetWithText(FilledButton, 'Create your account'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextFormField), findsNWidgets(5));
     expect(tester.takeException(), isNull);
   });
 
-  test(
-    'Profiles and attendance survive reload and prevent daily duplicates',
-    () async {
-      await UserSession.save();
-      await UserSession.recordAttendance('Operating Systems', '82703');
-      await UserSession.recordAttendance('Operating Systems', '82703');
-      expect(UserSession.attendance.length, 1);
-      UserSession.studentName = 'Changed';
-      await UserSession.load();
-      expect(UserSession.studentName, 'Test Student');
-      expect(UserSession.hasAttendance('82703'), isTrue);
-      UserSession.studentRollNo = '67890';
-      expect(UserSession.hasAttendance('82703'), isFalse);
+  for (final role in ['student', 'teacher', 'admin']) {
+    testWidgets('$role pages render on a phone without layout errors', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = session(role);
+      addTearDown(store.dispose);
+      await tester.pumpWidget(HybridAttendanceApp(store: store));
+      await tester.pumpAndSettle();
+      for (final page in [
+        'Classes',
+        'Sessions',
+        'Reports',
+        'Announcements',
+        'Devices',
+        if (role == 'admin') 'Administration',
+        'Profile',
+      ]) {
+        await tester.tap(find.byTooltip('Open navigation menu'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(page).last);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '$role $page');
+      }
+    });
+  }
+
+  testWidgets(
+    'Teacher opens a real session form and student has no management actions',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final teacher = session('teacher');
+      addTearDown(teacher.dispose);
+      await tester.pumpWidget(HybridAttendanceApp(store: teacher));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sessions').last);
+      await tester.pumpAndSettle();
+      expect(find.text('123456'), findsOneWidget);
+      await tester.tap(find.text('Open session'));
+      await tester.pumpAndSettle();
+      expect(find.text('Open attendance session'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+      final student = session('student');
+      addTearDown(student.dispose);
+      await tester.pumpWidget(HybridAttendanceApp(store: student));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sessions').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Open session'), findsNothing);
+      expect(find.text('123456'), findsNothing);
+      expect(find.text('Check in with classroom code'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     },
   );
-
-  testWidgets('Recording attendance reaches the teacher report', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: AttendanceFlowScreen()));
-    await tester.tap(find.text('Record attendance'));
-    await tester.pumpAndSettle();
-    expect(find.text('Attendance recorded for today'), findsOneWidget);
-    expect(UserSession.attendance.length, 1);
-    await tester.pumpWidget(
-      const MaterialApp(home: TeacherAttendanceReportScreen()),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Test Student'), findsOneWidget);
-    expect(find.text('12345'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-  testWidgets('Main screens render on a phone without layout errors', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    for (final screen in <Widget>[
-      const StudentDashboardScreen(),
-      const StudentScheduleScreen(),
-      const StudentStatsScreen(),
-      const StudentProfileScreen(),
-      const TeacherDashboardScreen(),
-      const TeacherAnalyticsScreen(),
-      const TeacherProfileScreen(),
-      const AdminDeviceApprovalScreen(),
-      const TeacherAttendanceReportScreen(),
-    ]) {
-      await tester.pumpWidget(MaterialApp(home: screen));
-      await tester.pumpAndSettle();
-      expect(
-        tester.takeException(),
-        isNull,
-        reason: screen.runtimeType.toString(),
-      );
-    }
-  });
-
-  testWidgets('An open teacher report updates when server records change', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: TeacherAttendanceReportScreen()),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Remote Student'), findsNothing);
-    UserSession.attendance.add({
-      'name': 'Remote Student',
-      'rollNo': 'REMOTE-1',
-      'subject': 'OS',
-      'courseCode': '82703',
-      'date': '2026-11-02',
-      'time': '12:30',
-    });
-    UserSession.revision.value++;
-    await tester.pumpAndSettle();
-    expect(find.text('Remote Student'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
 }

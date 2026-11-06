@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 class BackendApi {
   static bool enabled = true;
+  static String? csrf;
   static http.Client client = http.Client();
   static const _base = String.fromEnvironment('API_BASE_URL');
 
@@ -21,14 +22,28 @@ class BackendApi {
                 ? client.get(uri)
                 : client.post(
                     uri,
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {
+                      'Content-Type': 'application/json',
+                      if (csrf != null) 'X-CSRF-Token': csrf!,
+                    },
                     body: jsonEncode(body),
                   ))
             .timeout(const Duration(seconds: 8));
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400) {
-      throw StateError(data['error']?.toString() ?? 'Server request failed');
+      throw ApiException(
+        data['error']?.toString() ?? 'Server request failed',
+        response.statusCode,
+      );
     }
     return data;
   }
+}
+
+class ApiException implements Exception {
+  final String message;
+  final int status;
+  ApiException(this.message, this.status);
+  @override
+  String toString() => message;
 }
