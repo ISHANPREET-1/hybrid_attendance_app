@@ -166,7 +166,7 @@ class _AuthScreenState extends State<AuthScreen> {
       context: context,
       builder: (_) => EntryDialog(
         title: 'Attendance server',
-        fields: [FieldSpec('url', 'Server URL', value: BackendApi.serverUrl)],
+        fields: [FieldSpec('url', 'Server URL', initial: BackendApi.serverUrl)],
       ),
     );
     if (result == null) return;
