@@ -491,7 +491,7 @@ class _PortalScreenState extends State<PortalScreen> {
         'Classroom location check',
         initial: 'off',
         options: {
-          'off': 'Code + approved browser',
+          'off': 'Off',
           'on': 'Also use my current location as classroom center',
           'manual': 'Use classroom coordinates entered below',
         },
@@ -562,12 +562,7 @@ class _PortalScreenState extends State<PortalScreen> {
       'csi_required': data['csi'] == 'on',
     };
     if (data['location'] == 'on') {
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 30),
-        ),
-      );
+      final pos = await currentPosition();
       if (pos.accuracy > (payload['radius_m'] as int)) {
         throw Exception(
           'Location is too imprecise. Try outdoors or on a phone.',
@@ -583,6 +578,31 @@ class _PortalScreenState extends State<PortalScreen> {
       payload.addAll({'latitude': lat, 'longitude': lon});
     }
     await store.mutate('sessions/open', payload);
+  }
+
+  /// Asks for location permission first; Geolocator does not prompt by itself.
+  Future<Position> currentPosition() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      throw Exception('Turn on Location (GPS) on this device and try again.');
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied) {
+      throw Exception('Location permission is needed for this check.');
+    }
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception(
+        'Location permission is blocked. Allow it in the app settings and try again.',
+      );
+    }
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 30),
+      ),
+    );
   }
 
   Future<void> checkIn(Map<String, dynamic> session) async {
@@ -605,12 +625,7 @@ class _PortalScreenState extends State<PortalScreen> {
       );
     }
     if (session['latitude'] != null) {
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 30),
-        ),
-      );
+      final pos = await currentPosition();
       payload.addAll({
         'latitude': pos.latitude,
         'longitude': pos.longitude,
@@ -1074,14 +1089,17 @@ class _PortalScreenState extends State<PortalScreen> {
           spacing: 12,
           runSpacing: 12,
           children: [
-            button('Export all CSV', () async {
-              if (!await launchUrl(
-                Uri.base.resolve('/api/reports.csv'),
-                webOnlyWindowName: '_blank',
-              )) {
-                throw Exception('Could not open the CSV download');
-              }
-            }, icon: Icons.download),
+            if (kIsWeb)
+              button('Export all CSV', () async {
+                if (!await launchUrl(
+                  Uri.base.resolve('/api/reports.csv'),
+                  webOnlyWindowName: '_blank',
+                )) {
+                  throw Exception('Could not open the CSV download');
+                }
+              }, icon: Icons.download)
+            else
+              const Text('CSV export is available in the web portal.'),
           ],
         ),
         const SizedBox(height: 16),
@@ -1193,7 +1211,7 @@ class _PortalScreenState extends State<PortalScreen> {
       if (store.list('devices').isEmpty) empty('No browser approval requests.'),
       for (final device in store.list('devices'))
         panel(
-          '${device['label']} ${device['id'] == store.state['current_device_id'] ? '· This browser' : ''}',
+          '${device['label']} ${device['id'] == store.state['current_device_id'] ? (kIsWeb ? '· This browser' : '· This device') : ''}',
           [
             Text('${device['name']} · ${device['email']}'),
             Text(
@@ -1206,7 +1224,11 @@ class _PortalScreenState extends State<PortalScreen> {
                 spacing: 12,
                 runSpacing: 8,
                 children: [
-                  for (final status in ['approved', 'rejected', 'revoked'])
+                  for (final status in [
+                    if (device['status'] != 'approved') 'approved',
+                    if (device['status'] == 'pending') 'rejected',
+                    if (device['status'] == 'approved') 'revoked',
+                  ])
                     button(
                       switch (status) {
                         'approved' => 'Approve',
@@ -1215,7 +1237,7 @@ class _PortalScreenState extends State<PortalScreen> {
                       },
                       () async {
                         if (await confirm(
-                          'Set this browser to $status? Approving it revokes any other approved browser for this student.',
+                          'Set this device to $status? Approving it revokes any other approved device for this student.',
                         )) {
                           await store.mutate('devices/review', {
                             'device_id': device['id'],
