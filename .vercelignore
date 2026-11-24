@@ -9,3 +9,8 @@ backend/data/
 build/
 coverage/
 __pycache__/
+csi/data/
+csi/models/
+csi/.env
+firmware/sdkconfig.wifi
+firmware/.esp-csi/

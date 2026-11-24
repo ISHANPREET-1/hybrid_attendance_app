@@ -1,6 +1,8 @@
 # Hybrid Attendance
 
-Flutter web application with an authenticated Python backend. Students check in to real class sessions; teachers manage classes and rosters; administrators manage staff invitations and browser approvals.
+Flutter web and Android application with an authenticated Python backend. Students check in to real class sessions; teachers manage classes and rosters; administrators manage staff invitations, device approvals and CSI room sensors.
+
+Attendance is decided by the backend from several verification layers: identity, registered device, optional rotating code, optional classroom Wi-Fi (Android app), optional **ESP32 CSI room presence**, and optional location or campus network. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the rules and API, and [docs/HARDWARE_SETUP.md](docs/HARDWARE_SETUP.md) for the router, ESP32 firmware and CSI pipeline.
 
 ## Implemented workflows
 
@@ -12,6 +14,7 @@ Flutter web application with an authenticated Python backend. Students check in 
 - **Attendance:** the server derives the student from their login, requires roster membership and browser approval, verifies the live classroom code, enforces the session window, and prevents duplicate check-ins even under concurrent requests.
 - **Location/network options:** a teacher can optionally require a geofence using their current location or classroom coordinates; the server checks distance and reported accuracy. If campus egress CIDRs are configured, the teacher can require the observed client IP to match the campus network.
 - **Reports:** present/absent/pending/cancelled status, per-student/course percentages over completed sessions, search, and CSV download. Students see only their own records; teachers see only their own classes. Cancelled sessions do not count in percentages.
+- **Hybrid verification (v3):** per session, a teacher can require the classroom Wi-Fi SSID (read by the Android app with location permission) and a live `PRESENT` reading from the room's ESP32 CSI sensor. Android phones register with a secure install UUID plus an ANDROID_ID-derived hash; one phone cannot belong to two students, and reinstalling or replacing a phone needs administrator re-approval. Check-ins return `VERIFIED`, `PENDING` (CSI unavailable, stale or uncertain; nothing recorded) or `REJECTED`, with a per-layer explanation. Every attempt is logged for teachers. CSI sensors post to `POST /api/csi/verification` with their own revocable bearer token. CSI is room-level occupancy and never identifies a student.
 - **Announcements:** staff post to their classes; enrolled students see them. Dashboard figures, profiles, devices and reports refresh from the backend every ten seconds.
 
 There are no shared default passwords, fake rosters, sample approvals, or browser-only attendance writes. Optional INITIAL_ADMIN_* settings create the first administrator once using your private credentials. The old prototype screens have been replaced by the authenticated portal.
@@ -101,16 +104,17 @@ Both SQLite and PostgreSQL use SQLAlchemy's parameterized queries and shared sch
 
 ## Browser and platform limits
 
-The tested target is **Flutter web**. Browser approval binds an account to an approved browser cookie, not to unchangeable physical hardware. Classroom codes can be shared and reported location can be spoofed. These checks reduce casual proxy check-ins; they are not hardware attestation or proof of physical presence. Direct Wi-Fi SSID/BSSID inspection and stronger device attestation require a native app plus the institution's platform-specific configuration.
+Browser approval binds an account to an approved browser cookie, not to unchangeable physical hardware. The Android app adds an install UUID (Keystore-backed secure storage) and an ANDROID_ID-derived device hash, and reads the connected Wi-Fi SSID. These are stronger than a browser cookie but are still client-reported: a rooted phone can alter them. Classroom codes can be shared and reported location can be spoofed. CSI shows that *someone* is in the room, not who. Together the layers make proxy attendance much harder; none of them is hardware attestation on its own. Browsers cannot read the SSID, so sessions that require Wi-Fi must be checked in from the Android app.
 
 Location needs HTTPS in deployment (localhost is allowed for local testing), user permission, and an accurate device location. Campus-network checks compare the server-observed public IP against administrator-configured campus egress CIDRs. Private Wi-Fi addresses do not identify campus users to a public Vercel host. On Vercel the backend uses the platform-controlled `x-real-ip`; the local server uses the socket peer IP and ignores spoofable proxy headers. See [Geolocation API](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API).
 
-Native app builds are not validated in this change and need platform permission configuration and persistent native cookie handling before distribution. Automated email delivery, biometric identity and native hardware attestation are not included.
+Android builds need `flutter build apk` and testing on the target Android versions: the SSID check needs fine-location permission and location services on (Android 10+), and minSdk is 24. Native login and device cookies are stored encrypted (flutter_secure_storage); cookies saved by earlier builds are migrated automatically. Automated email delivery, biometric identity and native hardware attestation are not included.
 
 ## Validation
 
 ```powershell
-.tools\venv\Scripts\python.exe -m unittest backend.test_server -v
+.tools\venv\Scripts\python.exe -m unittest backend.test_server backend.test_bootstrap backend.test_verification -v
+cd csi; ..\.tools\venv\Scripts\python.exe -m unittest discover -s tests; cd ..   # needs csi\requirements.txt installed
 flutter analyze
 flutter test
 flutter build web --no-web-resources-cdn

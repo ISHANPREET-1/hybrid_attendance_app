@@ -60,8 +60,10 @@ class BackendApi {
       throw ApiException(
         data['error']?.toString() ?? 'Server request failed',
         response.statusCode,
+        data,
       );
     }
+    if (response.statusCode == 202) data['pending'] = true;
     return data;
   }
 }
@@ -69,7 +71,9 @@ class BackendApi {
 class ApiException implements Exception {
   final String message;
   final int status;
-  ApiException(this.message, this.status);
+  /// Full error body, e.g. the per-layer `checks` of a rejected check-in.
+  final Map<String, dynamic> data;
+  ApiException(this.message, this.status, [this.data = const {}]);
   @override
   String toString() => message;
 }

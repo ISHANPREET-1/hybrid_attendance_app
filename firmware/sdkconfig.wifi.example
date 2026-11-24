@@ -1,0 +1,4 @@
+# Copy to firmware/sdkconfig.wifi (git-ignored) and fill in the classroom network.
+# Must match the Archer C6 2.4 GHz attendance network exactly (case-sensitive).
+CONFIG_EXAMPLE_WIFI_SSID="ATTENDANCE_WIFI"
+CONFIG_EXAMPLE_WIFI_PASSWORD="change-me-strong-password"

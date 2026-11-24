@@ -204,7 +204,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Open session'), findsNothing);
       expect(find.text('123456'), findsNothing);
-      expect(find.text('Check in with classroom code'), findsOneWidget);
+      expect(find.text('Check in'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

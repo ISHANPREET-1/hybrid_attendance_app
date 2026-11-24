@@ -102,6 +102,60 @@ attempts = table('attempts_v2',
     Column('count', Integer, nullable=False),
     Column('reset_at', Float, nullable=False))
 
+# --- v3: hybrid verification (Wi-Fi, device identity, CSI room presence) ---
+# New tables only, so existing v2 databases migrate additively with create_all.
+
+# Per-session verification policy chosen by the teacher when opening a session.
+session_policy = table('session_policy_v3',
+    Column('session_id', ForeignKey(class_sessions.c.id), primary_key=True),
+    Column('code_required', Integer, nullable=False, default=1),
+    Column('wifi_required', Integer, nullable=False, default=0),
+    Column('wifi_ssid', String(64), nullable=False, default=''),
+    Column('csi_required', Integer, nullable=False, default=0),
+    Column('csi_max_age_s', Integer, nullable=False, default=30))
+# Native-app identity attached to an approved device record. The install UUID
+# changes on reinstall; the device hash is derived from Android's per-app ID.
+device_identity = table('device_identity_v3',
+    Column('device_id', ForeignKey(devices.c.id), primary_key=True),
+    Column('install_uuid', String(36), nullable=False),
+    Column('device_hash', String(64), nullable=False),
+    Column('platform', String(20), nullable=False),
+    Column('model', String(120), nullable=False, default=''),
+    Column('created_at', Float, nullable=False))
+# An ESP32 + Python processing host authorised to report presence for one room.
+csi_sensors = table('csi_sensors_v3',
+    Column('id', String(40), primary_key=True),
+    Column('name', String(120), nullable=False),
+    Column('room', String(120), nullable=False),
+    Column('token_hash', String(64), nullable=False, unique=True),
+    Column('active', Integer, nullable=False, default=1),
+    Column('created_at', Float, nullable=False),
+    Column('last_seen_at', Float))
+# Room-level presence results. These never identify a student.
+csi_readings = table('csi_readings_v3',
+    Column('id', String(40), primary_key=True),
+    Column('sensor_id', ForeignKey(csi_sensors.c.id), nullable=False),
+    Column('room', String(120), nullable=False, index=True),
+    Column('session_id', String(40)),
+    Column('status', String(10), nullable=False),
+    Column('measured_at', Float, nullable=False),
+    Column('received_at', Float, nullable=False, index=True),
+    Column('confidence', Float),
+    Column('packets', Integer),
+    Column('window_s', Float),
+    Column('error', String(200)))
+# Every check-in attempt and its per-layer result, for audit and teacher review.
+attendance_checks = table('attendance_checks_v3',
+    Column('id', String(40), primary_key=True),
+    Column('session_id', String(40), nullable=False, index=True),
+    Column('student_id', ForeignKey(users.c.id), nullable=False),
+    Column('outcome', String(10), nullable=False),
+    Column('reason', String(300), nullable=False, default=''),
+    Column('checks', String(2000), nullable=False, default='[]'),
+    Column('csi_reading_id', String(40)),
+    Column('wifi_ssid', String(64)),
+    Column('created_at', Float, nullable=False))
+
 
 def make_engine(url=None):
     url = url or os.getenv('DATABASE_URL')

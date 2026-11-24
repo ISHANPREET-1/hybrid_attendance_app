@@ -3,6 +3,7 @@ import csv
 import hashlib
 import hmac
 import io
+import json
 import ipaddress
 import math
 import os
@@ -16,15 +17,17 @@ from argon2.exceptions import VerificationError, InvalidHashError
 from sqlalchemy import select, insert, update, delete, and_, func
 from sqlalchemy.exc import IntegrityError
 from .database import (users, auth_sessions, invites, courses, enrollments,
-    class_sessions, session_roster, devices, attendance, notices, audit, attempts)
+    class_sessions, session_roster, devices, attendance, notices, audit, attempts,
+    session_policy, device_identity, csi_sensors, attendance_checks)
+from . import verification as verify
 
 PASSWORDS = PasswordHasher()
 IST = timezone(timedelta(hours=5, minutes=30))
 
 
 class ApiError(Exception):
-    def __init__(self, message, status=400):
-        self.message, self.status = message, status
+    def __init__(self, message, status=400, extra=None):
+        self.message, self.status, self.extra = message, status, extra or {}
         super().__init__(message)
 
 
@@ -240,6 +243,7 @@ class Service:
                         class_sessions.c.status == 'scheduled').values(status='open'))
                     current = one(conn, select(class_sessions.c.status, class_sessions.c.closed_at).where(class_sessions.c.id == item['id']))
                     item.update(current)
+                item.update({k: v for k, v in verify.policy_for(conn, item['id']).items() if k != 'session_id'})
                 secret = item.pop('code_secret')
                 if user['role'] != 'student' and item['status'] == 'open':
                     item['code'] = code_for({**item, 'code_secret': secret})
@@ -254,11 +258,26 @@ class Service:
                 devices.c.created_at, users.c.name, users.c.email).join(users, users.c.id == devices.c.user_id)
             if user['role'] != 'admin':
                 dev_query = dev_query.where(devices.c.user_id == user['id'])
+            dev_query = dev_query.add_columns(device_identity.c.platform, device_identity.c.model).outerjoin(
+                device_identity, device_identity.c.device_id == devices.c.id)
             device_rows = rows(conn, dev_query.order_by(devices.c.created_at.desc()))
             if device_token:
                 current = one(conn, select(devices).where(devices.c.user_id == user['id'], devices.c.token_hash == digest(device_token)))
             else:
                 current = None
+            session_ids = [item['id'] for item in sessions]
+            check_query = select(attendance_checks.c.id, attendance_checks.c.session_id, attendance_checks.c.student_id,
+                attendance_checks.c.outcome, attendance_checks.c.reason, attendance_checks.c.checks,
+                attendance_checks.c.wifi_ssid, attendance_checks.c.created_at, users.c.name, users.c.roll_no).join(
+                users, users.c.id == attendance_checks.c.student_id).where(attendance_checks.c.session_id.in_(session_ids))
+            if user['role'] == 'student':
+                check_query = check_query.where(attendance_checks.c.student_id == user['id'])
+            check_rows = rows(conn, check_query.order_by(attendance_checks.c.created_at.desc()).limit(200))
+            for item in check_rows:
+                item['checks'] = json.loads(item['checks'] or '[]')
+            rooms = [c['room'] for c in result_courses]
+            sensors = rows(conn, select(csi_sensors.c.id, csi_sensors.c.name, csi_sensors.c.room, csi_sensors.c.active,
+                csi_sensors.c.created_at, csi_sensors.c.last_seen_at).order_by(csi_sensors.c.created_at)) if user['role'] == 'admin' else []
             announcements = rows(conn, select(notices).where(notices.c.course_id.in_(ids)).order_by(notices.c.created_at.desc()).limit(100))
             return dict(user=public_user(user), courses=result_courses, sessions=sessions, roster=roster,
                 devices=device_rows, current_device_id=current['id'] if current else None,
@@ -266,6 +285,8 @@ class Service:
                 users=rows(conn, select(users.c.id, users.c.email, users.c.name, users.c.role, users.c.roll_no)) if user['role'] == 'admin' else [],
                 audit=rows(conn, select(audit).order_by(audit.c.created_at.desc()).limit(100)) if user['role'] == 'admin' else [],
                 campus_network_available=bool(os.getenv('CAMPUS_CIDRS')),
+                checks=check_rows, csi_rooms=verify.room_status(conn, rooms), csi_sensors=sensors,
+                attendance_ssid=verify.default_ssid(),
                 server_time=time.time())
 
     def reports(self, conn, user):
@@ -294,6 +315,7 @@ class Service:
         new_device_token = None
         if action == 'attendance':
             self.rate_limit('checkin', user['id'], 15, 300)
+            return self.check_in(user, data, device_token, ip), None
         with self.engine.begin() as conn:
             if action == 'profile':
                 values = dict(name=field(data, 'name', 120), department=field(data, 'department', 120, True), mobile=field(data, 'mobile', 20, True))
@@ -402,10 +424,28 @@ class Service:
                 network = data.get('network_required') is True
                 if network and not os.getenv('CAMPUS_CIDRS'):
                     raise ApiError('An administrator must configure CAMPUS_CIDRS first')
+                code_required = data.get('code_required') is not False
+                wifi_required = data.get('wifi_required') is True
+                csi_required = data.get('csi_required') is True
+                ssid = field(data, 'wifi_ssid', 64, True) or verify.default_ssid()
+                try:
+                    max_age = int(data.get('csi_max_age_s', verify.default_csi_max_age()))
+                    if not 5 <= max_age <= 600:
+                        raise ValueError()
+                except (ValueError, TypeError):
+                    raise ApiError('CSI freshness must be between 5 and 600 seconds')
+                if csi_required and not verify.active_sensor_count(conn, course['room']):
+                    raise ApiError('No active CSI sensor is registered for this class room. '
+                                   'Set the class room and register a sensor first.')
+                if not (code_required or wifi_required or csi_required or lat is not None or network):
+                    raise ApiError('Enable at least one presence check (code, Wi-Fi, CSI, location or network)')
                 session_id = uid()
                 conn.execute(insert(class_sessions).values(id=session_id, course_id=course['id'], starts_at=starts_at,
                     ends_at=ends_at, status='scheduled' if starts_at > now else 'open', code_secret=secrets.token_urlsafe(32),
                     latitude=lat, longitude=lon, radius_m=radius, network_required=int(network)))
+                conn.execute(insert(session_policy).values(session_id=session_id, code_required=int(code_required),
+                    wifi_required=int(wifi_required), wifi_ssid=ssid if wifi_required else '',
+                    csi_required=int(csi_required), csi_max_age_s=max_age))
                 members = conn.execute(select(enrollments.c.student_id).where(enrollments.c.course_id == course['id'], enrollments.c.left_at.is_(None))).scalars().all()
                 for student_id in members:
                     conn.execute(insert(session_roster).values(id=uid(), session_id=session_id, student_id=student_id))
@@ -421,19 +461,39 @@ class Service:
             elif action == 'devices/request':
                 self.require(user, 'student')
                 label = field(data, 'label', 120)
+                try:
+                    identity = verify.identity_from(data)
+                except ValueError as error:
+                    raise ApiError(str(error))
+                if identity:
+                    # A phone may be bound to only one student account at a time.
+                    taken = conn.execute(select(devices.c.id).join(device_identity, device_identity.c.device_id == devices.c.id).where(
+                        device_identity.c.device_hash == identity['device_hash'], devices.c.user_id != user['id'],
+                        devices.c.status.in_(['pending', 'approved']))).first()
+                    if taken:
+                        log(conn, user['id'], 'device_conflict', identity['device_hash'][:16])
+                        raise ApiError('This phone is already registered to another student account', 409)
                 if not device_token:
                     device_token = secrets.token_urlsafe(32)
                     new_device_token = device_token
                 item = one(conn, select(devices).where(devices.c.user_id == user['id'], devices.c.token_hash == digest(device_token)))
                 if item:
-                    if item['status'] != 'approved':
+                    stored = conn.execute(select(device_identity.c.device_id).where(device_identity.c.device_id == item['id'])).first()
+                    # An approval made before the app sent identity (or by a browser) is
+                    # re-reviewed once the phone identity is supplied, never silently upgraded.
+                    if item['status'] != 'approved' or (identity and not stored):
                         conn.execute(update(devices).where(devices.c.id == item['id']).values(status='pending', label=label))
+                        item['status'] = 'pending'
                 else:
                     count = conn.execute(select(func.count()).select_from(devices).where(devices.c.user_id == user['id'])).scalar()
                     if count >= 10:
                         raise ApiError('Device limit reached. Ask an administrator to review your devices.')
                     conn.execute(insert(devices).values(id=uid(), user_id=user['id'], token_hash=digest(device_token),
                         label=label, status='pending', created_at=time.time()))
+                    item = one(conn, select(devices).where(devices.c.user_id == user['id'], devices.c.token_hash == digest(device_token)))
+                if identity and item['status'] != 'approved':
+                    conn.execute(delete(device_identity).where(device_identity.c.device_id == item['id']))
+                    conn.execute(insert(device_identity).values(device_id=item['id'], created_at=time.time(), **identity))
                 log(conn, user['id'], 'device_requested', user['id'])
             elif action == 'devices/review':
                 self.require(user, 'admin')
@@ -446,26 +506,75 @@ class Service:
                     conn.execute(update(devices).where(devices.c.user_id == item['user_id'], devices.c.status == 'approved').values(status='revoked'))
                 conn.execute(update(devices).where(devices.c.id == item['id']).values(status=status))
                 log(conn, user['id'], f'device_{status}', item['id'])
-            elif action == 'attendance':
-                self.require(user, 'student')
-                session_id = field(data, 'session_id', 40)
+            elif action == 'csi/sensors':
+                self.require(user, 'admin')
+                room = field(data, 'room', 120)
+                token = secrets.token_urlsafe(32)
+                sensor_id = uid()
+                conn.execute(insert(csi_sensors).values(id=sensor_id, name=field(data, 'name', 120), room=room,
+                    token_hash=digest(token), active=1, created_at=time.time()))
+                log(conn, user['id'], 'csi_sensor_created', sensor_id)
+                return {'id': sensor_id, 'token': token,
+                        'message': 'Put this token in the CSI service .env as CSI_SERVICE_TOKEN. It is shown only once.'}, None
+            elif action == 'csi/sensors/revoke':
+                self.require(user, 'admin')
+                sensor_id = field(data, 'sensor_id', 40)
+                if conn.execute(update(csi_sensors).where(csi_sensors.c.id == sensor_id).values(active=0)).rowcount != 1:
+                    raise ApiError('Sensor not found', 404)
+                log(conn, user['id'], 'csi_sensor_revoked', sensor_id)
+            elif action == 'notices':
+                course = self.course(conn, user, field(data, 'course_id', 40), True)
+                conn.execute(insert(notices).values(id=uid(), course_id=course['id'], body=field(data, 'body', 1000), created_at=time.time()))
+                log(conn, user['id'], 'announcement_posted', course['id'])
+            else:
+                raise ApiError('Unknown endpoint', 404)
+        return {'message': 'Saved successfully'}, new_device_token
+
+    def check_in(self, user, data, device_token, ip):
+        """Combine every verification layer; the server alone decides the outcome."""
+        self.require(user, 'student')
+        session_id = field(data, 'session_id', 40)
+        checks = [verify.check('identity', 'pass', 'Signed in as ' + user['email'])]
+        reading = ssid = None
+
+        def reject(detail, status=403):
+            raise ApiError(detail, status, {'outcome': 'REJECTED', 'checks': checks})
+
+        try:
+            with self.engine.begin() as conn:
                 # A write lock serializes check-in with close; row locking works on Postgres too.
                 conn.execute(update(class_sessions).where(class_sessions.c.id == session_id).values(status=class_sessions.c.status))
                 session = one(conn, select(class_sessions).where(class_sessions.c.id == session_id))
-                if not session or session['status'] not in ('open', 'scheduled') or not session['starts_at'] <= time.time() < session['ends_at']:
-                    raise ApiError('This attendance session is closed', 409)
+                now = time.time()
+                if not session or session['status'] not in ('open', 'scheduled') or not session['starts_at'] <= now < session['ends_at']:
+                    checks.append(verify.check('session', 'fail', 'This attendance session is closed'))
+                    reject('This attendance session is closed', 409)
                 if not conn.execute(select(session_roster.c.id).where(session_roster.c.session_id == session_id,
-                    session_roster.c.student_id == user['id'])).first():
-                    raise ApiError('You were not on the roster when this session opened', 403)
-                self.course(conn, user, session['course_id'])
+                        session_roster.c.student_id == user['id'])).first():
+                    checks.append(verify.check('session', 'fail', 'Not on the roster when this session opened'))
+                    reject('You were not on the roster when this session opened')
+                course = self.course(conn, user, session['course_id'])
+                checks.append(verify.check('session', 'pass', f"{course['code']} session is active"))
                 conn.execute(update(users).where(users.c.id == user['id']).values(name=users.c.name))
+                policy = verify.policy_for(conn, session_id)
                 device = one(conn, select(devices).where(devices.c.user_id == user['id'],
                     devices.c.token_hash == digest(device_token or ''), devices.c.status == 'approved'))
-                if not device:
-                    raise ApiError('This browser needs administrator device approval', 403)
-                code = field(data, 'code', 6)
-                if not any(hmac.compare_digest(code, code_for(session, time.time() - offset)) for offset in (0, 30)):
-                    raise ApiError('The classroom code is incorrect or expired', 403)
+                result, _ = verify.device_check(conn, device, data)
+                checks.append(result)
+                if result['status'] == 'fail':
+                    reject(result['detail'])
+                existing = one(conn, select(attendance).where(attendance.c.session_id == session_id,
+                    attendance.c.student_id == user['id']))
+                if existing:
+                    return {'message': 'Attendance was already recorded for this session', 'outcome': 'VERIFIED',
+                            'duplicate': True, 'checks': checks, 'recorded_at': existing['recorded_at']}
+                if policy['code_required']:
+                    code = data.get('code') if isinstance(data.get('code'), str) else ''
+                    code = code.strip()[:6]
+                    if not code or not any(hmac.compare_digest(code, code_for(session, now - offset)) for offset in (0, 30)):
+                        checks.append(verify.check('code', 'fail', 'The classroom code is incorrect or expired'))
+                    else:
+                        checks.append(verify.check('code', 'pass', 'Classroom code accepted'))
                 distance = None
                 if session['latitude'] is not None:
                     try:
@@ -476,29 +585,38 @@ class Service:
                         delta_lon = math.radians(lon - session['longitude'])
                         value = math.sin(delta_lat / 2) ** 2 + math.cos(math.radians(lat)) * math.cos(math.radians(session['latitude'])) * math.sin(delta_lon / 2) ** 2
                         distance = 6371000 * 2 * math.asin(math.sqrt(min(1, value)))
+                        checks.append(verify.check('location', 'fail', 'Your reported location is outside the classroom area')
+                                      if distance > session['radius_m'] else verify.check('location', 'pass', f'{int(distance)} m from classroom'))
                     except (KeyError, ValueError, TypeError):
-                        raise ApiError('A sufficiently accurate browser location is required', 403)
-                    if distance > session['radius_m']:
-                        raise ApiError('Your reported location is outside the classroom area', 403)
+                        checks.append(verify.check('location', 'fail', 'A sufficiently accurate location is required'))
                 if session['network_required']:
                     try:
                         allowed = any(ipaddress.ip_address(ip) in ipaddress.ip_network(c.strip()) for c in os.environ['CAMPUS_CIDRS'].split(','))
                     except (ValueError, KeyError):
                         allowed = False
-                    if not allowed:
-                        raise ApiError('Connect through the configured campus network', 403)
-                if not conn.execute(select(attendance.c.id).where(attendance.c.session_id == session_id, attendance.c.student_id == user['id'])).first():
+                    checks.append(verify.check('network', 'pass', 'Campus network address') if allowed
+                                  else verify.check('network', 'fail', 'Connect through the configured campus network'))
+                result, ssid = verify.wifi_check(policy, data)
+                checks.append(result)
+                result, reading = verify.csi_check(conn, policy, session, course['room'], now)
+                checks.append(result)
+                outcome = verify.outcome_of(checks)
+                if outcome == 'VERIFIED':
                     conn.execute(insert(attendance).values(id=uid(), session_id=session_id, student_id=user['id'],
-                        device_id=device['id'], recorded_at=time.time(), distance_m=distance,
+                        device_id=device['id'], recorded_at=now, distance_m=distance,
                         network_checked=session['network_required']))
                     log(conn, user['id'], 'attendance_recorded', session_id)
-            elif action == 'notices':
-                course = self.course(conn, user, field(data, 'course_id', 40), True)
-                conn.execute(insert(notices).values(id=uid(), course_id=course['id'], body=field(data, 'body', 1000), created_at=time.time()))
-                log(conn, user['id'], 'announcement_posted', course['id'])
-            else:
-                raise ApiError('Unknown endpoint', 404)
-        return {'message': 'Saved successfully'}, new_device_token
+        except ApiError as error:
+            if error.extra.get('outcome') == 'REJECTED':
+                verify.record_check(self.engine, session_id, user['id'], 'REJECTED', error.message, checks, reading, ssid)
+            raise
+        first = next((c['detail'] for c in checks if c['status'] in ('fail', 'pending')), '')
+        verify.record_check(self.engine, session_id, user['id'], outcome, first, checks, reading, ssid)
+        if outcome == 'REJECTED':
+            raise ApiError(first, 403, {'outcome': outcome, 'checks': checks})
+        if outcome == 'PENDING':
+            return {'message': first, 'outcome': outcome, 'checks': checks, '_http_status': 202}
+        return {'message': 'Attendance recorded', 'outcome': outcome, 'checks': checks}
 
     def export(self, user):
         with self.engine.connect() as conn:

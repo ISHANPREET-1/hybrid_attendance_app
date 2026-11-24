@@ -1,0 +1,31 @@
+# Hybrid Attendance overlay for esp-csi examples/get-started/csi_recv_router.
+# Applied after the example's own sdkconfig.defaults (see setup_firmware.ps1).
+# Contains no secrets: the SSID/password live in firmware/sdkconfig.wifi (git-ignored).
+
+# CSI capture (IDF 5/6 option names; the example uses the older aliases)
+CONFIG_ESP_WIFI_CSI_ENABLED=y
+CONFIG_ESP_WIFI_AMPDU_TX_ENABLED=n
+CONFIG_ESP_WIFI_AMPDU_RX_ENABLED=n
+
+# Serial output read by csi/attendance_csi (must match SERIAL_BAUD in csi/.env)
+# (IDF v6 derives the idf.py monitor baud from the console baud automatically.)
+CONFIG_ESP_CONSOLE_UART_CUSTOM=y
+CONFIG_ESP_CONSOLE_UART_CUSTOM_NUM_0=y
+CONFIG_ESP_CONSOLE_UART_BAUDRATE=921600
+
+# Keep reconnecting forever instead of aborting after 6 tries, so the board
+# recovers on its own when the router reboots (guide Steps 38 and 45).
+CONFIG_EXAMPLE_WIFI_CONN_MAX_RETRY=-1
+# Do not wait for an IPv6 address; most classroom routers do not hand one out.
+CONFIG_EXAMPLE_CONNECT_IPV6=n
+# Use Wi-Fi, never Ethernet.
+CONFIG_EXAMPLE_CONNECT_WIFI=y
+CONFIG_EXAMPLE_CONNECT_ETHERNET=n
+# Credentials come from sdkconfig.wifi at build time, not from the serial console.
+CONFIG_EXAMPLE_WIFI_SSID_PWD_FROM_STDIN=n
+# WPA2-Personal (Archer C6 "WPA/WPA2-Personal, AES")
+CONFIG_EXAMPLE_WIFI_AUTH_WPA2_PSK=y
+
+# Reboot automatically if the CPU hangs instead of silently stopping CSI output.
+CONFIG_ESP_TASK_WDT_PANIC=y
+CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT=y
