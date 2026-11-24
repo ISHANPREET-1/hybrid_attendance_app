@@ -3,6 +3,8 @@
 .dart_tool/
 .env
 .env.*
+vercel/.env
+vercel/.env.*
 backend/data/
 build/
 coverage/

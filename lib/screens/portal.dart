@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/backend_api.dart';
@@ -136,15 +137,47 @@ class _EntryDialogState extends State<EntryDialog> {
 
 class AuthScreen extends StatefulWidget {
   final PortalStore store;
-  const AuthScreen({super.key, required this.store});
+  final String initialMode;
+  const AuthScreen({
+    super.key,
+    required this.store,
+    this.initialMode = 'login',
+  });
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
 class _AuthScreenState extends State<AuthScreen> {
   String mode = 'login';
+  @override
+  void initState() {
+    super.initState();
+    mode = widget.initialMode == 'setup' && widget.store.setupRequired
+        ? 'setup'
+        : 'login';
+  }
+
   bool busy = false;
   String? error;
+  Future<void> configureServer() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => EntryDialog(
+        title: 'Attendance server',
+        fields: [FieldSpec('url', 'Server URL', value: BackendApi.serverUrl)],
+      ),
+    );
+    if (result == null) return;
+    setState(() { busy = true; error = null; });
+    try {
+      await BackendApi.setServerUrl(result['url'].toString());
+      await widget.store.initialize();
+    } catch (e) {
+      if (mounted) setState(() => error = e.toString());
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
   Future<void> submit() async {
     final fields = <FieldSpec>[
       if (mode == 'setup')
@@ -262,6 +295,12 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                   const SizedBox(height: 24),
+                  if (!kIsWeb)
+                    TextButton.icon(
+                      onPressed: busy ? null : configureServer,
+                      icon: const Icon(Icons.dns_outlined),
+                      label: const Text('Configure server'),
+                    ),
                   FilledButton(
                     onPressed: busy ? null : submit,
                     child: Text(busy ? 'Please wait…' : title),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hybrid_attendance_app/main.dart';
 import 'package:hybrid_attendance_app/utils/portal_store.dart';
+import 'package:hybrid_attendance_app/screens/portal.dart';
 
 PortalStore session(String role) {
   final store = PortalStore()..loading = false;
@@ -100,6 +101,33 @@ PortalStore session(String role) {
 }
 
 void main() {
+  testWidgets(
+    'Direct setup mode opens administrator setup only before it is configured',
+    (tester) async {
+      final store = PortalStore()
+        ..loading = false
+        ..setupRequired = true;
+      addTearDown(store.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AuthScreen(store: store, initialMode: 'setup'),
+        ),
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Set up administrator'),
+        findsOneWidget,
+      );
+      await tester.pumpWidget(const SizedBox());
+      store.setupRequired = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: AuthScreen(store: store, initialMode: 'setup'),
+        ),
+      );
+      expect(find.widgetWithText(FilledButton, 'Sign in'), findsOneWidget);
+      expect(find.text('First administrator setup'), findsNothing);
+    },
+  );
   testWidgets('Login and registration dialog display without a role selector', (
     tester,
   ) async {

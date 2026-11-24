@@ -16,9 +16,11 @@ class HybridAttendanceApp extends StatefulWidget {
 
 class _HybridAttendanceAppState extends State<HybridAttendanceApp> {
   late final PortalStore store;
+  late final String initialAuthMode;
   @override
   void initState() {
     super.initState();
+    initialAuthMode = Uri.base.fragment == '/setup' ? 'setup' : 'login';
     store = widget.store ?? PortalStore();
     if (widget.store == null) store.initialize();
   }
@@ -33,6 +35,7 @@ class _HybridAttendanceAppState extends State<HybridAttendanceApp> {
   Widget build(BuildContext context) => MaterialApp(
     title: 'Hybrid Attendance',
     debugShowCheckedModeBanner: false,
+    initialRoute: '/',
     theme: ThemeData(
       useMaterial3: true,
       colorSchemeSeed: const Color(0xff197565),
@@ -50,7 +53,10 @@ class _HybridAttendanceAppState extends State<HybridAttendanceApp> {
           );
         }
         return store.user == null
-            ? AuthScreen(store: store)
+            ? AuthScreen(
+                store: store,
+                initialMode: initialAuthMode,
+              )
             : PortalScreen(key: ValueKey(store.user!['id']), store: store);
       },
     ),

@@ -14,7 +14,7 @@ Flutter web application with an authenticated Python backend. Students check in 
 - **Reports:** present/absent/pending/cancelled status, per-student/course percentages over completed sessions, search, and CSV download. Students see only their own records; teachers see only their own classes. Cancelled sessions do not count in percentages.
 - **Announcements:** staff post to their classes; enrolled students see them. Dashboard figures, profiles, devices and reports refresh from the backend every ten seconds.
 
-There are no seeded accounts, fake rosters, sample approvals, default passwords, or browser-only attendance writes in the active app. The old prototype screens have been replaced by the authenticated portal.
+There are no shared default passwords, fake rosters, sample approvals, or browser-only attendance writes. Optional INITIAL_ADMIN_* settings create the first administrator once using your private credentials. The old prototype screens have been replaced by the authenticated portal.
 
 ## Run locally on Windows
 
@@ -33,7 +33,17 @@ The launcher creates an isolated Python environment, installs backend dependenci
 
 If a previous version is still running, stop it before launching the new backend.
 
-## First administrator and first attendance
+## Easy administrator sign-in
+
+Private deployment settings and generated initial administrator credentials are in `vercel/.env`. Fill its DATABASE_URL and add its values in Vercel project settings before deploying. The build creates the first administrator automatically when INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD are provided. Existing accounts and passwords are never overwritten on redeploy.
+
+Local sign-in: **http://127.0.0.1:8080/#/login**. Hosted sign-in: `https://YOUR-PROJECT.vercel.app/#/login`. The login ID is INITIAL_ADMIN_EMAIL; the password is INITIAL_ADMIN_PASSWORD. Internal first-admin ID: `initial-admin`. The local administrator has already been created from the private file. See `vercel/README.md`.
+
+For a fresh local database: `.tools\venv\Scripts\python.exe -m backend.manage bootstrap-admin --env-file vercel/.env`. This reads only administrator settings from that file and keeps your normal local database and cookie settings.
+
+Manual setup, when no administrator exists: **http://127.0.0.1:8080/#/setup** or `https://YOUR-PROJECT.vercel.app/#/setup`.
+
+## Manual administrator setup and first attendance
 
 1. Open the local app and choose **First administrator setup**.
 2. Read the one-time setup secret from `.tools/setup-token.txt`. If `ADMIN_SETUP_TOKEN` is configured in `.env.local`, use that value instead. Keep this token private.
@@ -59,6 +69,9 @@ The repository includes `vercel.json`, a pinned Flutter build script, `.python-v
 | Variable | Value | Required |
 | --- | --- | --- |
 | `DATABASE_URL` | Hosted PostgreSQL pooled URL, e.g. `postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require` | Yes |
+| `INITIAL_ADMIN_EMAIL` | Initial administrator login email from `vercel/.env` | For automatic first setup |
+| `INITIAL_ADMIN_PASSWORD` | Generated private password from `vercel/.env` | For automatic first setup |
+| `INITIAL_ADMIN_NAME` | Administrator display name | Optional |
 | `ADMIN_SETUP_TOKEN` | A long random setup secret generated on your computer | Yes, for initial administrator setup |
 | `APP_ORIGIN` | Exact HTTPS production origin, no trailing slash | Recommended for production; omit for preview deployments with changing URLs |
 | `COOKIE_SECURE` | `true` | Automatic on Vercel; required on other HTTPS hosts |
@@ -68,7 +81,7 @@ Generate a setup token locally with `python -c "import secrets; print(secrets.to
 
 4. Deploy. The build installs backend dependencies, applies the additive v2 schema, fetches the official pinned Flutter SDK and builds the web frontend. Provision separate database URLs for Preview and Production to keep their users and attendance separate.
 5. Open `/api/health` and verify `status: ok`, `storage: postgresql`, `version: 2`.
-6. Open the app and complete first-administrator setup using the token you configured. Then invite real teachers and enroll real students.
+6. Sign in at `/#/login` using the INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD you configured. If automatic setup was omitted, use `/#/setup` with ADMIN_SETUP_TOKEN instead. Then invite real teachers and enroll real students.
 7. Run the complete first-attendance workflow above on the deployment. Hosted PostgreSQL and actual Vercel routing must be verified against your own deployment; no cloud account or credentials are included in this repository.
 
 `API_BASE_URL` is unnecessary for this same-origin deployment. `DATABASE_URL`, passwords and setup secrets are backend values and are never embedded in Flutter. Changing backend environment variables requires a new deployment. Do not point `API_BASE_URL` at localhost on Vercel.

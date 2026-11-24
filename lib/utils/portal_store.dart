@@ -17,6 +17,7 @@ class PortalStore extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
+      await BackendApi.initialize();
       setupRequired =
           (await BackendApi.request('auth/status'))['setup_required'] == true;
       try {

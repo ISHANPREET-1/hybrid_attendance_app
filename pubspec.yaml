@@ -16,6 +16,8 @@ dependencies:
   http: ^1.2.2
   geolocator: ^14.0.2
   url_launcher: ^6.3.2
+  cookie_jar: ^4.0.9
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

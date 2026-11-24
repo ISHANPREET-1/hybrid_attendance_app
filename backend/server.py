@@ -188,6 +188,8 @@ class Handler(SimpleHTTPRequestHandler):
 def create_server(port=8080, db_path=None, web_dir=None, setup_token=None):
     engine = make_engine('sqlite:///' + str(db_path) if db_path else None)
     migrate(engine)
+    from backend.bootstrap import bootstrap_admin
+    bootstrap_admin(engine)
     service = Service(engine, setup_token)
     if not service.setup_token:
         import secrets
