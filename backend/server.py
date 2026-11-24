@@ -69,7 +69,14 @@ class Handler(SimpleHTTPRequestHandler):
         # Vercel overwrites x-real-ip; never trust proxy headers on the local server.
         if os.getenv('VERCEL'):
             return self.headers.get('x-real-ip', '')
-        return self.client_address[0]
+        peer = self.client_address[0]
+        # Behind our own reverse proxy (Caddy on the same VM) the peer is loopback;
+        # the proxy appends the real client as the LAST X-Forwarded-For entry.
+        if os.getenv('TRUST_PROXY') == 'true' and peer in ('127.0.0.1', '::1'):
+            forwarded = self.headers.get('X-Forwarded-For', '').split(',')[-1].strip()
+            if forwarded:
+                return forwarded
+        return peer
 
     def json_body(self):
         if self.headers.get('Content-Type', '').split(';')[0].strip() != 'application/json':

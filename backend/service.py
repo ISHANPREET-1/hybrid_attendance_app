@@ -132,7 +132,8 @@ class Service:
         if action == 'status':
             with self.engine.connect() as conn:
                 return {'setup_required': not bool(conn.execute(select(users.c.id).where(users.c.role == 'admin')).first())}, None
-        self.rate_limit('auth-ip', ip, 40)
+        # A whole class often shares one campus NAT address; AUTH_IP_LIMIT raises the cap.
+        self.rate_limit('auth-ip', ip, int(os.getenv('AUTH_IP_LIMIT', '40')))
         if action == 'login':
             address = email(data)
             self.rate_limit('login-email', address, 10)
