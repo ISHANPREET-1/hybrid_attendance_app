@@ -69,7 +69,28 @@ class Handler(SimpleHTTPRequestHandler):
         # Vercel overwrites x-real-ip; never trust proxy headers on the local server.
         if os.getenv('VERCEL'):
             return self.headers.get('x-real-ip', '')
-        return self.client_address[0]
+        peer = self.client_address[0]
+        # Behind our own reverse proxy (Caddy on the same VM) the peer is loopback;
+        # the proxy appends the real client as the LAST X-Forwarded-For entry.
+        if os.getenv('TRUST_PROXY') == 'true' and peer in ('127.0.0.1', '::1'):
+            forwarded = self.headers.get('X-Forwarded-For', '').split(',')[-1].strip()
+            if forwarded:
+                return forwarded
+        return peer
+
+    def json_body(self):
+        if self.headers.get('Content-Type', '').split(';')[0].strip() != 'application/json':
+            raise ApiError('Use application/json', 415)
+        try:
+            length = int(self.headers.get('Content-Length', '0'))
+            if not 0 < length <= 16384:
+                raise ValueError()
+            data = json.loads(self.rfile.read(length))
+            if not isinstance(data, dict):
+                raise ValueError()
+        except (ValueError, UnicodeError):
+            raise ApiError('Expected a JSON object of at most 16384 bytes')
+        return data
 
     def check_origin(self):
         origin = self.headers.get('Origin')
@@ -96,19 +117,17 @@ class Handler(SimpleHTTPRequestHandler):
             if method == 'GET' and path == 'auth/status':
                 return self.respond(200, self.service.auth('status', {}, self.client_ip())[0])
             data = {}
+            if method == 'POST' and path == 'csi/verification':
+                # Service-to-service: the ESP32 processing host authenticates with its own
+                # bearer token. No cookies, so CSRF/origin checks do not apply.
+                auth = self.headers.get('Authorization', '')
+                token = auth[7:].strip() if auth.lower().startswith('bearer ') else ''
+                self.service.rate_limit('csi-ip', self.client_ip(), 600, 60)
+                from backend.verification import ingest_reading
+                return self.respond(200, ingest_reading(self.service.engine, token, self.json_body()))
             if method == 'POST':
                 self.check_origin()
-                if self.headers.get('Content-Type', '').split(';')[0].strip() != 'application/json':
-                    raise ApiError('Use application/json', 415)
-                try:
-                    length = int(self.headers.get('Content-Length', '0'))
-                    if not 0 < length <= 16384:
-                        raise ValueError()
-                    data = json.loads(self.rfile.read(length))
-                    if not isinstance(data, dict):
-                        raise ValueError()
-                except (ValueError, UnicodeError):
-                    raise ApiError('Expected a JSON object of at most 16384 bytes')
+                data = self.json_body()
                 if path in ('auth/login', 'auth/register', 'auth/setup', 'auth/reset'):
                     result, token = self.service.auth(path.split('/')[1], data, self.client_ip())
                     if token:
@@ -142,9 +161,9 @@ class Handler(SimpleHTTPRequestHandler):
                 self.set_cookie('ha_device', device, 31536000)
             if path == 'password':
                 self.set_cookie('ha_session', '', 0)
-            self.respond(200, result)
+            self.respond(result.pop('_http_status', 200), result)
         except ApiError as error:
-            self.respond(error.status, {'error': error.message})
+            self.respond(error.status, {**error.extra, 'error': error.message})
         except IntegrityError:
             self.respond(409, {'error': 'An account, roll number, course or record with those details already exists.'})
         except SQLAlchemyError:

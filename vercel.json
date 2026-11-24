@@ -6,7 +6,7 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 30,
-      "excludeFiles": "{.tools/**,.git/**,.env*,vercel/.env*,backend/data/**,build/**,test/**,android/**,ios/**,windows/**,linux/**,macos/**}"
+      "excludeFiles": "{.tools/**,.git/**,.env*,vercel/.env*,backend/data/**,build/**,test/**,android/**,ios/**,csi/**,firmware/**,docs/**,windows/**,linux/**,macos/**}"
     }
   },
   "rewrites": [

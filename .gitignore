@@ -52,3 +52,12 @@ __pycache__/
 .env.*
 !.env.example
 .vercel/
+
+# CSI processing host: secrets, raw datasets, trained models and logs stay local
+csi/.env
+csi/data/
+csi/models/
+csi/logs/
+csi/venv/
+firmware/sdkconfig.wifi
+firmware/.esp-csi/

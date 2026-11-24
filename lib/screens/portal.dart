@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/backend_api.dart';
+import '../utils/device_checks.dart'
+    if (dart.library.io) '../utils/device_checks_io.dart' as device;
 import '../utils/portal_store.dart';
 
 String stamp(dynamic value) {
@@ -164,7 +166,7 @@ class _AuthScreenState extends State<AuthScreen> {
       context: context,
       builder: (_) => EntryDialog(
         title: 'Attendance server',
-        fields: [FieldSpec('url', 'Server URL', value: BackendApi.serverUrl)],
+        fields: [FieldSpec('url', 'Server URL', initial: BackendApi.serverUrl)],
       ),
     );
     if (result == null) return;
@@ -489,7 +491,7 @@ class _PortalScreenState extends State<PortalScreen> {
         'Classroom location check',
         initial: 'off',
         options: {
-          'off': 'Code + approved browser',
+          'off': 'Off',
           'on': 'Also use my current location as classroom center',
           'manual': 'Use classroom coordinates entered below',
         },
@@ -519,6 +521,33 @@ class _PortalScreenState extends State<PortalScreen> {
             'on': 'Require configured campus network',
         },
       ),
+      const FieldSpec(
+        'code',
+        'Rotating classroom code',
+        initial: 'on',
+        options: {'on': 'Required', 'off': 'Not required'},
+      ),
+      const FieldSpec(
+        'wifi',
+        'Classroom Wi-Fi check (Android app only)',
+        initial: 'off',
+        options: {'off': 'Off', 'on': 'Require the classroom Wi-Fi network'},
+      ),
+      FieldSpec(
+        'wifi_ssid',
+        'Classroom Wi-Fi name (SSID)',
+        initial: '${store.state['attendance_ssid'] ?? 'ATTENDANCE_WIFI'}',
+        optional: true,
+      ),
+      const FieldSpec(
+        'csi',
+        'CSI room-presence check',
+        initial: 'off',
+        options: {
+          'off': 'Off',
+          'on': 'Require a live PRESENT reading from the room sensor',
+        },
+      ),
     ]);
     if (data == null) return;
     final payload = <String, dynamic>{
@@ -527,14 +556,13 @@ class _PortalScreenState extends State<PortalScreen> {
       'radius_m': int.tryParse(data['radius_m']) ?? 0,
       'network_required': data['network'] == 'on',
       'start_time': data['start_time'],
+      'code_required': data['code'] != 'off',
+      'wifi_required': data['wifi'] == 'on',
+      'wifi_ssid': data['wifi_ssid'],
+      'csi_required': data['csi'] == 'on',
     };
     if (data['location'] == 'on') {
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 30),
-        ),
-      );
+      final pos = await currentPosition();
       if (pos.accuracy > (payload['radius_m'] as int)) {
         throw Exception(
           'Location is too imprecise. Try outdoors or on a phone.',
@@ -552,35 +580,151 @@ class _PortalScreenState extends State<PortalScreen> {
     await store.mutate('sessions/open', payload);
   }
 
-  Future<void> checkIn(Map<String, dynamic> session) async {
-    final data = await form('Enter the current classroom code', [
-      const FieldSpec('code', 'Six-digit code shown by your teacher'),
-    ]);
-    if (data == null) return;
-    final payload = <String, dynamic>{
-      'session_id': session['id'],
-      'code': data['code'],
-    };
-    if (session['latitude'] != null) {
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 30),
-        ),
+  /// Asks for location permission first; Geolocator does not prompt by itself.
+  Future<Position> currentPosition() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      throw Exception('Turn on Location (GPS) on this device and try again.');
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied) {
+      throw Exception('Location permission is needed for this check.');
+    }
+    if (permission == LocationPermission.deniedForever) {
+      throw Exception(
+        'Location permission is blocked. Allow it in the app settings and try again.',
       );
+    }
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 30),
+      ),
+    );
+  }
+
+  Future<void> checkIn(Map<String, dynamic> session) async {
+    final payload = <String, dynamic>{'session_id': session['id']};
+    if (session['code_required'] != 0) {
+      final data = await form('Enter the current classroom code', [
+        const FieldSpec('code', 'Six-digit code shown by your teacher'),
+      ]);
+      if (data == null) return;
+      payload['code'] = data['code'];
+    }
+    if (device.nativeChecksSupported) {
+      payload.addAll(await device.deviceIdentity());
+      if (session['wifi_required'] == 1) {
+        payload.addAll(await device.wifiStatus());
+      }
+    } else if (session['wifi_required'] == 1) {
+      throw Exception(
+        'This session checks the classroom Wi-Fi. Check in from the Android app.',
+      );
+    }
+    if (session['latitude'] != null) {
+      final pos = await currentPosition();
       payload.addAll({
         'latitude': pos.latitude,
         'longitude': pos.longitude,
         'accuracy': pos.accuracy,
       });
     }
-    await store.mutate('attendance', payload);
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Attendance recorded')));
+    Map<String, dynamic> result;
+    try {
+      result = await store.mutate('attendance', payload);
+    } on ApiException catch (e) {
+      if (e.data['checks'] == null) rethrow;
+      result = {...e.data, 'message': e.message};
     }
+    if (mounted) await showVerification(result);
   }
+
+  static const checkLabels = {
+    'identity': 'Authentication',
+    'session': 'Attendance session',
+    'device': 'Registered device',
+    'code': 'Classroom code',
+    'location': 'Location',
+    'network': 'Campus network',
+    'wifi': 'Classroom Wi-Fi',
+    'csi': 'Room presence (CSI)',
+  };
+
+  Widget checkTile(Map<String, dynamic> c) {
+    final status = c['status'];
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        status == 'pass'
+            ? Icons.check_circle
+            : status == 'pending'
+            ? Icons.hourglass_top
+            : Icons.cancel,
+        color: status == 'pass'
+            ? Colors.green.shade700
+            : status == 'pending'
+            ? Colors.orange.shade800
+            : Colors.red.shade700,
+      ),
+      title: Text(checkLabels[c['name']] ?? '${c['name']}'),
+      subtitle: Text('${c['detail'] ?? ''}'),
+    );
+  }
+
+  Future<void> showVerification(Map<String, dynamic> result) async {
+    final outcome = result['outcome'] ?? 'REJECTED';
+    final checks = (result['checks'] as List? ?? [])
+        .map((c) => Map<String, dynamic>.from(c))
+        .toList();
+    await dialog<void>(
+      (context) => AlertDialog(
+        title: Text(switch (outcome) {
+          'VERIFIED' => result['duplicate'] == true
+              ? 'Attendance already recorded'
+              : 'Attendance successful',
+          'PENDING' => 'Verification pending',
+          _ => 'Attendance rejected',
+        }),
+        content: SizedBox(
+          width: 440,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (outcome != 'VERIFIED') Text('${result['message'] ?? ''}'),
+                if (outcome == 'PENDING')
+                  const Text(
+                    'Nothing was recorded. Wait a few seconds and check in again.',
+                  ),
+                const SizedBox(height: 8),
+                for (final c in checks) checkTile(c),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String requirements(Map<String, dynamic> session) => [
+    if (session['code_required'] != 0) 'Code',
+    'Approved device',
+    if (session['wifi_required'] == 1) 'Wi-Fi ${session['wifi_ssid']}',
+    if (session['csi_required'] == 1) 'CSI room presence',
+    if (session['latitude'] != null) 'Location',
+    if (session['network_required'] == 1) 'Campus network',
+  ].join(' · ');
 
   Widget button(
     String label,
@@ -673,7 +817,7 @@ class _PortalScreenState extends State<PortalScreen> {
         ]),
         panel('Attendance checks', const [
           Text(
-            'Check-in requires a signed-in student, a session roster entry, an approved browser and a rotating classroom code. Teachers may also require browser location and a configured campus network. Browser location can be spoofed; browser approval does not identify physical hardware.',
+            'Check-in requires a signed-in student on the session roster and an approved device. Per session, teachers choose further checks: rotating classroom code, classroom Wi-Fi (Android app), CSI room presence from the ESP32 sensor, location and campus network. The server makes the final decision: VERIFIED, PENDING (e.g. room sensor data stale or uncertain; nothing is recorded) or REJECTED. CSI detects room occupancy only and never identifies a student; Wi-Fi names and locations can be spoofed, so no single check is proof on its own.',
           ),
         ]),
       ],
@@ -809,9 +953,8 @@ class _PortalScreenState extends State<PortalScreen> {
       for (final session in store.list('sessions'))
         panel(courseName(session['course_id']), [
           Text('${stamp(session['starts_at'])} → ${stamp(session['ends_at'])}'),
-          Text(
-            'Status: ${session['status']} · ${session['latitude'] != null ? 'Location required · ' : ''}${session['network_required'] == 1 ? 'Campus network required' : 'No network restriction'}',
-          ),
+          Text('Status: ${session['status']} · Checks: ${requirements(session)}'),
+          if (!student && session['csi_required'] == 1) roomStatus(session),
           const SizedBox(height: 12),
           if (session['status'] == 'open') ...[
             if (!student) ...[
@@ -851,16 +994,66 @@ class _PortalScreenState extends State<PortalScreen> {
                 ),
               )
             else
-              button(
-                session['latitude'] != null
-                    ? 'Check in with code and location'
-                    : 'Check in with classroom code',
-                () => checkIn(session),
-              ),
+              button('Check in', () => checkIn(session), icon: Icons.how_to_reg),
           ],
+          if (!student) attempts(session),
         ]),
     ],
   );
+
+  Widget roomStatus(Map<String, dynamic> session) {
+    final room = courses
+        .where((c) => c['id'] == session['course_id'])
+        .map((c) => c['room'])
+        .firstOrNull;
+    final status = store
+        .list('csi_rooms')
+        .where((r) => r['room'] == room)
+        .firstOrNull;
+    if (status == null) {
+      return Text(
+        'Room sensor ($room): no sensor registered',
+        style: TextStyle(color: Colors.red.shade700),
+      );
+    }
+    final conf = status['confidence'] is num
+        ? ' · confidence ${((status['confidence'] as num) * 100).round()}%'
+        : '';
+    final age = status['age_s'] is num ? ' · ${status['age_s']} s ago' : '';
+    return Text(
+      'Room sensor ($room): ${status['status']}$conf$age'
+      '${(status['detail'] ?? '').toString().isNotEmpty ? ' · ${status['detail']}' : ''}',
+      style: TextStyle(
+        color: status['status'] == 'PRESENT'
+            ? Colors.green.shade700
+            : Colors.orange.shade800,
+      ),
+    );
+  }
+
+  Widget attempts(Map<String, dynamic> session) {
+    final rows = store
+        .list('checks')
+        .where((c) => c['session_id'] == session['id'])
+        .toList();
+    if (rows.isEmpty) return const SizedBox.shrink();
+    final failed = rows.where((c) => c['outcome'] != 'VERIFIED').length;
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      title: Text('Verification attempts (${rows.length}, $failed not verified)'),
+      children: [
+        for (final c in rows)
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: Text('${c['name']} · ${c['roll_no']} · ${c['outcome']}'),
+            subtitle: Text(
+              '${stamp(c['created_at'])}${(c['reason'] ?? '').toString().isNotEmpty ? '\n${c['reason']}' : ''}',
+            ),
+          ),
+      ],
+    );
+  }
 
   Widget reportPage() {
     final reports = store.list('reports');
@@ -896,14 +1089,17 @@ class _PortalScreenState extends State<PortalScreen> {
           spacing: 12,
           runSpacing: 12,
           children: [
-            button('Export all CSV', () async {
-              if (!await launchUrl(
-                Uri.base.resolve('/api/reports.csv'),
-                webOnlyWindowName: '_blank',
-              )) {
-                throw Exception('Could not open the CSV download');
-              }
-            }, icon: Icons.download),
+            if (kIsWeb)
+              button('Export all CSV', () async {
+                if (!await launchUrl(
+                  Uri.base.resolve('/api/reports.csv'),
+                  webOnlyWindowName: '_blank',
+                )) {
+                  throw Exception('Could not open the CSV download');
+                }
+              }, icon: Icons.download)
+            else
+              const Text('CSV export is available in the web portal.'),
           ],
         ),
         const SizedBox(height: 16),
@@ -987,28 +1183,40 @@ class _PortalScreenState extends State<PortalScreen> {
   Widget devicePage() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      panel('Browser approval', [
-        const Text(
-          'Approval is tied to this browser’s secure cookie. Clearing cookies or switching browsers requires a new approval. An administrator can approve one browser per student at a time. This does not identify physical hardware.',
+      panel(device.nativeChecksSupported ? 'Phone registration' : 'Browser approval', [
+        Text(
+          device.nativeChecksSupported
+              ? 'This phone is registered with a secure app ID (changes if the app is reinstalled) and a device fingerprint derived from Android\'s app-scoped device ID. One approved device per student; a phone cannot be registered to two students. Replacing a phone needs administrator approval.'
+              : 'Approval is tied to this browser’s secure cookie. Clearing cookies or switching browsers requires a new approval. An administrator can approve one browser per student at a time. This does not identify physical hardware. Sessions that check the classroom Wi-Fi need the Android app.',
         ),
         if (student) ...[
           const SizedBox(height: 12),
           button(
-            'Request approval for this browser',
-            () => actionForm('Describe this browser', 'devices/request', [
-              const FieldSpec('label', 'Example: My phone · Chrome'),
-            ]),
+            device.nativeChecksSupported
+                ? 'Register this phone'
+                : 'Request approval for this browser',
+            () async {
+              final identity = await device.deviceIdentity();
+              await actionForm('Describe this device', 'devices/request', [
+                FieldSpec(
+                  'label',
+                  'Example: My phone · Chrome',
+                  initial: '${identity['model'] ?? ''}',
+                ),
+              ], identity);
+            },
           ),
         ],
       ]),
       if (store.list('devices').isEmpty) empty('No browser approval requests.'),
       for (final device in store.list('devices'))
         panel(
-          '${device['label']} ${device['id'] == store.state['current_device_id'] ? '· This browser' : ''}',
+          '${device['label']} ${device['id'] == store.state['current_device_id'] ? (kIsWeb ? '· This browser' : '· This device') : ''}',
           [
             Text('${device['name']} · ${device['email']}'),
             Text(
-              'Status: ${device['status']} · Requested ${stamp(device['created_at'])}',
+              'Status: ${device['status']} · Requested ${stamp(device['created_at'])}'
+              '${device['platform'] != null ? ' · ${device['platform']} app (${device['model']})' : ' · browser'}',
             ),
             if (admin) ...[
               const SizedBox(height: 12),
@@ -1016,7 +1224,11 @@ class _PortalScreenState extends State<PortalScreen> {
                 spacing: 12,
                 runSpacing: 8,
                 children: [
-                  for (final status in ['approved', 'rejected', 'revoked'])
+                  for (final status in [
+                    if (device['status'] != 'approved') 'approved',
+                    if (device['status'] == 'pending') 'rejected',
+                    if (device['status'] == 'approved') 'revoked',
+                  ])
                     button(
                       switch (status) {
                         'approved' => 'Approve',
@@ -1025,7 +1237,7 @@ class _PortalScreenState extends State<PortalScreen> {
                       },
                       () async {
                         if (await confirm(
-                          'Set this browser to $status? Approving it revokes any other approved browser for this student.',
+                          'Set this device to $status? Approving it revokes any other approved device for this student.',
                         )) {
                           await store.mutate('devices/review', {
                             'device_id': device['id'],
@@ -1078,6 +1290,49 @@ class _PortalScreenState extends State<PortalScreen> {
         ],
       ),
       const SizedBox(height: 16),
+      panel('CSI room sensors', [
+        const Text(
+          'Each ESP32 + processing laptop reports room-level presence for one room. The room name must match the class room exactly. The token is shown once; put it in csi/.env as CSI_SERVICE_TOKEN.',
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: button(
+            'Register sensor',
+            () => actionForm('Register CSI sensor', 'csi/sensors', [
+              const FieldSpec('name', 'Name, e.g. ESP32 Room 101'),
+              const FieldSpec('room', 'Room (same as the class room field)'),
+            ]),
+            icon: Icons.sensors,
+          ),
+        ),
+        for (final sensor in store.list('csi_sensors'))
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text('${sensor['name']} · ${sensor['room']}'),
+            subtitle: Text(
+              '${sensor['active'] == 1 ? 'Active' : 'Revoked'} · '
+              '${sensor['last_seen_at'] != null ? 'Last report ${stamp(sensor['last_seen_at'])}' : 'Never reported'}',
+            ),
+            trailing: sensor['active'] == 1
+                ? IconButton(
+                    tooltip: 'Revoke sensor token',
+                    icon: const Icon(Icons.block),
+                    onPressed: busy
+                        ? null
+                        : () => run(() async {
+                            if (await confirm(
+                              'Revoke ${sensor['name']}? Its token stops working immediately.',
+                            )) {
+                              await store.mutate('csi/sensors/revoke', {
+                                'sensor_id': sensor['id'],
+                              });
+                            }
+                          }),
+                  )
+                : null,
+          ),
+      ]),
       panel('Accounts', [
         for (final user in store.list('users'))
           ListTile(
