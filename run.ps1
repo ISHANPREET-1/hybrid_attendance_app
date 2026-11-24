@@ -9,8 +9,13 @@ if (-not (Test-Path -LiteralPath $venvPython)) {
     & $pythonCommand.Source -m venv .tools/venv
     if ($LASTEXITCODE -ne 0) { throw 'Could not create backend virtual environment.' }
 }
-& $venvPython -c "import sqlalchemy, psycopg, argon2, dotenv" 2>$null
-if ($LASTEXITCODE -ne 0) {
+# Windows PowerShell 5.1 turns native stderr into a terminating error under 'Stop',
+# so run the dependency probe with errors tolerated.
+$ErrorActionPreference = 'Continue'
+& $venvPython -c "import sqlalchemy, psycopg, argon2, dotenv" 2>$null | Out-Null
+$probe = $LASTEXITCODE
+$ErrorActionPreference = 'Stop'
+if ($probe -ne 0) {
     & $venvPython -m pip install -r requirements.txt
     if ($LASTEXITCODE -ne 0) { throw 'Backend dependency installation failed.' }
 }
